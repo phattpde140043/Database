@@ -46,11 +46,12 @@ EXECUTE FUNCTION inventory_update_set_timestamp();
 --------------------------------------------------------------------------------
 -- Creating shipments table with RANGE partitioning by month on shipment_date
 CREATE TABLE shipments (
-    shipment_id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+    shipment_id BIGINT GENERATED ALWAYS AS IDENTITY,
     order_id BIGINT NOT NULL,
     warehouse_id BIGINT NOT NULL REFERENCES warehouses(warehouse_id),
     shipment_date TIMESTAMPTZ NOT NULL DEFAULT now() CHECK (shipment_date <= CURRENT_TIMESTAMP),
-    status VARCHAR(20) NOT NULL CHECK (status IN ('pending', 'in_transit', 'delivered', 'cancelled')) DEFAULT 'pending'
+    status VARCHAR(20) NOT NULL CHECK (status IN ('pending', 'in_transit', 'delivered', 'cancelled')) DEFAULT 'pending',
+	PRIMARY KEY (shipment_id,shipment_date)
 ) PARTITION BY RANGE (shipment_date);
 
 -- Function tạo partition theo tháng cho bảng orders
@@ -93,11 +94,14 @@ SELECT create_monthly_partition('shipments', 2025, 10); -- Tạo partition cho t
 --------------------------------------------------------------------------------
 -- Creating delivery_tracking table with RANGE partitioning by month on checkpoint_time
 CREATE TABLE delivery_tracking (
-    tracking_id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-    shipment_id BIGINT NOT NULL REFERENCES shipments(shipment_id),
+    tracking_id BIGINT GENERATED ALWAYS AS IDENTITY,
+    shipment_id BIGINT NOT NULL,
+	shipment_date TIMESTAMPTZ NOT NULL CHECK (shipment_date <= CURRENT_TIMESTAMP),
     checkpoint_time TIMESTAMPTZ NOT NULL CHECK (checkpoint_time <= CURRENT_TIMESTAMP),
     location VARCHAR(500) NOT NULL,
-    status VARCHAR(20) NOT NULL CHECK (status IN ('in_transit', 'delivered', 'cancelled')) DEFAULT 'in_transit'
+    status VARCHAR(20) NOT NULL CHECK (status IN ('in_transit', 'delivered', 'cancelled')) DEFAULT 'in_transit',
+	PRIMARY KEY (tracking_id,checkpoint_time),
+	FOREIGN KEY (shipment_id,shipment_date) REFERENCES shipments(shipment_id,shipment_date)
 ) PARTITION BY RANGE (checkpoint_time);
 
 -- Tạo partition cho bảng delivery_tracking
@@ -188,15 +192,15 @@ CREATE OR REPLACE FUNCTION audit_dml_trigger()
 RETURNS TRIGGER AS $$
 BEGIN
     IF (TG_OP = 'DELETE') THEN
-        INSERT INTO audit.audit_log(user_name, action_type, object_type, object_name, query)
+        INSERT INTO audit_log(user_name, action_type, object_type, object_name, query)
         VALUES (session_user, TG_OP, 'TABLE', TG_TABLE_NAME, current_query());
         RETURN OLD;
-    ELSE IF (TG_OP = 'UPDATE') THEN
-        INSERT INTO audit.audit_log(user_name, action_type, object_type, object_name, query)
+    ELSIF (TG_OP = 'UPDATE') THEN
+        INSERT INTO audit_log(user_name, action_type, object_type, object_name, query)
         VALUES (session_user, TG_OP, 'TABLE', TG_TABLE_NAME, current_query());
         RETURN NEW;
-    ELSE IF (TG_OP = 'INSERT') THEN
-        INSERT INTO audit.audit_log(user_name, action_type, object_type, object_name, query)
+    ELSIF (TG_OP = 'INSERT') THEN
+        INSERT INTO audit_log(user_name, action_type, object_type, object_name, query)
         VALUES (session_user, TG_OP, 'TABLE', TG_TABLE_NAME, current_query());
         RETURN NEW;
     END IF;
@@ -206,7 +210,7 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE FUNCTION audit_ddl_trigger()
 RETURNS event_trigger AS $$
 BEGIN
-    INSERT INTO audit.audit_log(user_name, action_type, object_type, object_name, query)
+    INSERT INTO audit_log(user_name, action_type, object_type, object_name, query)
     SELECT
         session_user,
         tg_tag,  -- ví dụ: CREATE TABLE, ALTER TABLE
