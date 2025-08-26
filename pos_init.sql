@@ -108,18 +108,18 @@ CREATE TABLE payment_types (
 );
 
 
-
 --------------------------------------------------------------------------------
 --                               Creating orders table
 -- Creating orders table with RANGE partitioning by month on order_date
 CREATE TABLE orders (
-    order_id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+    order_id BIGINT GENERATED ALWAYS AS IDENTITY,
     customer_id VARCHAR(20) NOT NULL REFERENCES customers(customer_id),
     order_date TIMESTAMPTZ NOT NULL DEFAULT now() CHECK (order_date <= now()),
     total_amount DECIMAL(12,2) NOT NULL CHECK (total_amount >= 0),
     shipping_address VARCHAR(500) NOT NULL,
     payment_type_id INT NOT NULL REFERENCES payment_types(payment_type_id),
     payment_status VARCHAR(20) NOT NULL CHECK (payment_status IN ('pending', 'completed', 'failed')) DEFAULT 'pending',
+	PRIMARY KEY (order_id,order_date)
 ) PARTITION BY RANGE (order_date);
 
 -- Trigger function to set default shipping_address from customers table
@@ -182,19 +182,19 @@ SELECT create_monthly_partition('orders', 2025, 10); -- Tạo partition cho thá
 
 
 
-
-
 --------------------------------------------------------------------------------
 --                             Creating order_items table
 -- Creating order_items table with RANGE and HASH partitioning
 CREATE TABLE order_items (
-    order_item_id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-    order_id BIGINT NOT NULL REFERENCES orders(order_id),
+    order_item_id BIGINT GENERATED ALWAYS AS IDENTITY,
+    order_id BIGINT NOT NULL ,
     product_id VARCHAR(20) NOT NULL REFERENCES products(product_id),
     sku_id BIGINT NOT NULL REFERENCES products_sku(sku_id),
     quantity INT NOT NULL CHECK (quantity > 0),
     unit_price DECIMAL(10,2) NOT NULL CHECK (unit_price > 0),
-    order_date TIMESTAMP NOT NULL
+    order_date TIMESTAMP NOT NULL,
+	PRIMARY KEY (order_id, order_item_id, order_date),
+	FOREIGN KEY (order_id, order_date) REFERENCES orders(order_id, order_date)
 ) PARTITION BY RANGE (order_date);
 
 SELECT create_monthly_partition('order_items', 2025, 8); -- Tạo partition cho tháng 8 năm 2025
@@ -280,15 +280,15 @@ CREATE OR REPLACE FUNCTION audit_dml_trigger()
 RETURNS TRIGGER AS $$
 BEGIN
     IF (TG_OP = 'DELETE') THEN
-        INSERT INTO audit.audit_log(user_name, action_type, object_type, object_name, query)
+        INSERT INTO audit_log(user_name, action_type, object_type, object_name, query)
         VALUES (session_user, TG_OP, 'TABLE', TG_TABLE_NAME, current_query());
         RETURN OLD;
-    ELSE IF (TG_OP = 'UPDATE') THEN
-        INSERT INTO audit.audit_log(user_name, action_type, object_type, object_name, query)
+    ELSIF (TG_OP = 'UPDATE') THEN
+        INSERT INTO audit_log(user_name, action_type, object_type, object_name, query)
         VALUES (session_user, TG_OP, 'TABLE', TG_TABLE_NAME, current_query());
         RETURN NEW;
-    ELSE IF (TG_OP = 'INSERT') THEN
-        INSERT INTO audit.audit_log(user_name, action_type, object_type, object_name, query)
+    ELSIF (TG_OP = 'INSERT') THEN
+        INSERT INTO audit_log(user_name, action_type, object_type, object_name, query)
         VALUES (session_user, TG_OP, 'TABLE', TG_TABLE_NAME, current_query());
         RETURN NEW;
     END IF;
@@ -298,7 +298,7 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE FUNCTION audit_ddl_trigger()
 RETURNS event_trigger AS $$
 BEGIN
-    INSERT INTO audit.audit_log(user_name, action_type, object_type, object_name, query)
+    INSERT INTO audit_log(user_name, action_type, object_type, object_name, query)
     SELECT
         session_user,
         tg_tag,  -- ví dụ: CREATE TABLE, ALTER TABLE
