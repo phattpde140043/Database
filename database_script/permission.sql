@@ -2,12 +2,12 @@
 --                               Phân quyền
 
 -- 1. Tạo các ROLE chính
-CREATE ROLE db_admin;
-CREATE ROLE db_engineer;
-CREATE ROLE db_analyst;
-CREATE ROLE sale_app;
-CREATE ROLE logistic_app;
-CREATE ROLE erp_app;
+CREATE ROLE db_admin; --WITH LOGIN PASSWORD 'your_password';
+CREATE ROLE db_engineer; --WITH LOGIN PASSWORD 'your_password';
+CREATE ROLE db_analyst; --WITH LOGIN PASSWORD 'your_password';
+CREATE ROLE sale_app; --WITH LOGIN PASSWORD 'your_password';
+CREATE ROLE logistic_app; --WITH LOGIN PASSWORD 'your_password';
+CREATE ROLE erp_app; --WITH LOGIN PASSWORD 'your_password';
 
 -- Các role bổ sung cho dữ liệu PII và nghiệp vụ
 CREATE ROLE pii_role;
@@ -32,51 +32,229 @@ REVOKE ALL ON DATABASE erp_database FROM PUBLIC;
 ----------------------------------------------------
 
 -- DB Admin: toàn quyền
-GRANT ALL PRIVILEGES ON DATABASE pos_database TO db_admin;
-GRANT ALL PRIVILEGES ON DATABASE logistic_database TO db_admin;
-GRANT ALL PRIVILEGES ON DATABASE erp_database TO db_admin;
+CREATE OR REPLACE FUNCTION grant_dba_privileges(
+    target_db TEXT,
+    target_user TEXT,
+    target_schema TEXT DEFAULT 'public'
+) RETURNS void AS
+$$
+DECLARE
+    role_exists BOOLEAN;
+BEGIN
+    -- 1. Tạo user nếu chưa tồn tại
+    SELECT EXISTS(SELECT 1 FROM pg_roles WHERE rolname = target_user) INTO role_exists;
+    IF NOT role_exists THEN
+        EXECUTE format('CREATE ROLE %I WITH LOGIN PASSWORD %L', target_user, 'your_password');
+    END IF;
 
+    -- 2. Gán quyền trên database
+    EXECUTE format('GRANT ALL PRIVILEGES ON DATABASE %I TO %I', target_db, target_user);
 
+    -- 3. Gán quyền trên schema
+    EXECUTE format('GRANT ALL PRIVILEGES ON SCHEMA %I TO %I', target_schema, target_user);
 
+    -- 4. Gán quyền trên tất cả TABLES, SEQUENCES, FUNCTIONS trong schema
+    EXECUTE format('GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA %I TO %I', target_schema, target_user);
+    EXECUTE format('GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA %I TO %I', target_schema, target_user);
+    EXECUTE format('GRANT ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA %I TO %I', target_schema, target_user);
 
-GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA pos TO db_admin;
-GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA logistic TO db_admin;
-GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA erp TO db_admin;
-ALTER DEFAULT PRIVILEGES IN SCHEMA pos, logistic, erp GRANT ALL PRIVILEGES ON TABLES TO db_admin;
+    -- 5. Thiết lập quyền mặc định cho object tạo mới
+    EXECUTE format(
+        'ALTER DEFAULT PRIVILEGES IN SCHEMA %I GRANT ALL PRIVILEGES ON TABLES TO %I',
+        target_schema, target_user
+    );
+    EXECUTE format(
+        'ALTER DEFAULT PRIVILEGES IN SCHEMA %I GRANT ALL PRIVILEGES ON SEQUENCES TO %I',
+        target_schema, target_user
+    );
+    EXECUTE format(
+        'ALTER DEFAULT PRIVILEGES IN SCHEMA %I GRANT ALL PRIVILEGES ON FUNCTIONS TO %I',
+        target_schema, target_user
+    );
+
+    -- 6. (Tuỳ chọn) Cho phép user tạo database
+    EXECUTE format('ALTER ROLE %I CREATEDB', target_user);
+
+END;
+$$ LANGUAGE plpgsql;
+
+SELECT grant_dba_privileges('pos_database', 'db_admin', 'public');
+SELECT grant_dba_privileges('logistic_database', 'db_admin', 'public');
+SELECT grant_dba_privileges('erp_database', 'db_admin', 'public');
+
 
 -- DB Engineer: chỉ DML, không DELETE
-GRANT SELECT, INSERT, UPDATE ON ALL TABLES IN SCHEMA pos TO db_engineer;
-GRANT SELECT, INSERT, UPDATE ON ALL TABLES IN SCHEMA logistic TO db_engineer;
-GRANT SELECT, INSERT, UPDATE ON ALL TABLES IN SCHEMA erp TO db_engineer;
-ALTER DEFAULT PRIVILEGES IN SCHEMA pos, logistic, erp GRANT SELECT, INSERT, UPDATE ON TABLES TO db_engineer;
+
+CREATE OR REPLACE FUNCTION grant_de_privileges(
+    target_db TEXT,
+    target_user TEXT,
+    target_schema TEXT DEFAULT 'public'
+) RETURNS void AS
+$$
+DECLARE
+    role_exists BOOLEAN;
+BEGIN
+    -- 1. Tạo role/user nếu chưa tồn tại
+    SELECT EXISTS(SELECT 1 FROM pg_roles WHERE rolname = target_user) INTO role_exists;
+    IF NOT role_exists THEN
+        EXECUTE format('CREATE ROLE %I WITH LOGIN PASSWORD %L', target_user, 'changeme');
+    END IF;
+
+    -- 2. Database-level: CONNECT, CREATE, TEMP
+    EXECUTE format('GRANT CONNECT, CREATE, TEMP ON DATABASE %I TO %I', target_db, target_user);
+
+    -- 3. Schema-level: USAGE, CREATE
+    EXECUTE format('GRANT USAGE, CREATE ON SCHEMA %I TO %I', target_schema, target_user);
+
+    -- 4. Table-level: CHỈ SELECT, INSERT, UPDATE, REFERENCES, TRIGGER
+    EXECUTE format(
+        'GRANT SELECT, INSERT, UPDATE, REFERENCES, TRIGGER ON ALL TABLES IN SCHEMA %I TO %I',
+        target_schema, target_user
+    );
+
+    -- 5. Sequence-level: ALL (cần để thao tác nextval/serial/identity)
+    EXECUTE format('GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA %I TO %I', target_schema, target_user);
+
+    -- 6. Function-level: EXECUTE
+    EXECUTE format('GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA %I TO %I', target_schema, target_user);
+
+    -- 7. Default privileges cho object mới tạo
+    EXECUTE format(
+        'ALTER DEFAULT PRIVILEGES IN SCHEMA %I GRANT SELECT, INSERT, UPDATE, REFERENCES, TRIGGER ON TABLES TO %I',
+        target_schema, target_user
+    );
+    EXECUTE format(
+        'ALTER DEFAULT PRIVILEGES IN SCHEMA %I GRANT ALL PRIVILEGES ON SEQUENCES TO %I',
+        target_schema, target_user
+    );
+    EXECUTE format(
+        'ALTER DEFAULT PRIVILEGES IN SCHEMA %I GRANT EXECUTE ON FUNCTIONS TO %I',
+        target_schema, target_user
+    );
+
+END;
+$$ LANGUAGE plpgsql;
+
+SELECT grant_de_privileges('pos_database', 'db_engineer', 'public');
+SELECT grant_de_privileges('logistic_database', 'db_engineer', 'public');
+SELECT grant_de_privileges('erp_database', 'db_engineer', 'public');
+
+
 
 -- DB Analyst: chỉ SELECT trên view
-GRANT USAGE ON SCHEMA pos TO db_analyst;
-GRANT USAGE ON SCHEMA logistic TO db_analyst;
-GRANT USAGE ON SCHEMA erp TO db_analyst;
-GRANT SELECT ON ALL TABLES IN SCHEMA pos TO db_analyst;
-GRANT SELECT ON ALL TABLES IN SCHEMA logistic TO db_analyst;
-GRANT SELECT ON ALL TABLES IN SCHEMA erp TO db_analyst;
+
+CREATE OR REPLACE FUNCTION grant_analyst_privileges(
+    target_db TEXT,
+    target_user TEXT,
+    target_schema TEXT DEFAULT 'public'
+) RETURNS void AS
+$$
+DECLARE
+    role_exists BOOLEAN;
+BEGIN
+    -- 1. Tạo user nếu chưa tồn tại
+    SELECT EXISTS(SELECT 1 FROM pg_roles WHERE rolname = target_user) INTO role_exists;
+    IF NOT role_exists THEN
+        EXECUTE format('CREATE ROLE %I WITH LOGIN PASSWORD %L', target_user, 'changeme');
+    END IF;
+
+    -- 2. Database-level: CONNECT
+    EXECUTE format('GRANT CONNECT ON DATABASE %I TO %I', target_db, target_user);
+
+    -- 3. Schema-level: USAGE
+    EXECUTE format('GRANT USAGE ON SCHEMA %I TO %I', target_schema, target_user);
+
+    -- 4. Table-level: chỉ SELECT
+    EXECUTE format('GRANT SELECT ON ALL TABLES IN SCHEMA %I TO %I', target_schema, target_user);
+
+    -- 5. Function-level: EXECUTE
+    EXECUTE format('GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA %I TO %I', target_schema, target_user);
+
+    -- 6. Default privileges cho object mới (chỉ SELECT)
+    EXECUTE format(
+        'ALTER DEFAULT PRIVILEGES IN SCHEMA %I GRANT SELECT ON TABLES TO %I',
+        target_schema, target_user
+    );
+    EXECUTE format(
+        'ALTER DEFAULT PRIVILEGES IN SCHEMA %I GRANT EXECUTE ON FUNCTIONS TO %I',
+        target_schema, target_user
+    );
+
+END;
+$$ LANGUAGE plpgsql;
+
+
+SELECT grant_analyst_privileges('pos_database', 'db_analyst', 'public');
+SELECT grant_analyst_privileges('logistic_database', 'db_analyst', 'public');
+SELECT grant_analyst_privileges('erp_database', 'db_analyst', 'public');
+
+
+
+--------------------------------------------------------------------------------------
+
+CREATE OR REPLACE FUNCTION grant_application_privileges(
+    target_db TEXT,
+    target_user TEXT,
+    target_schema TEXT DEFAULT 'public'
+) RETURNS void AS
+$$
+DECLARE
+    role_exists BOOLEAN;
+BEGIN
+    -- 1. Tạo user nếu chưa tồn tại
+    SELECT EXISTS(SELECT 1 FROM pg_roles WHERE rolname = target_user) INTO role_exists;
+    IF NOT role_exists THEN
+        EXECUTE format('CREATE ROLE %I WITH LOGIN PASSWORD %L', target_user, 'changeme');
+    END IF;
+
+    -- 2. Database-level: CONNECT
+    EXECUTE format('GRANT CONNECT ON DATABASE %I TO %I', target_db, target_user);
+
+    -- 3. Schema-level: USAGE
+    EXECUTE format('GRANT USAGE ON SCHEMA %I TO %I', target_schema, target_user);
+
+    -- 4. Table-level: SELECT, INSERT, UPDATE
+    EXECUTE format('GRANT SELECT, INSERT, UPDATE ON ALL TABLES IN SCHEMA %I TO %I',
+                   target_schema, target_user);
+
+    -- 5. Sequence-level: USAGE, SELECT, UPDATE
+    EXECUTE format('GRANT USAGE, SELECT, UPDATE ON ALL SEQUENCES IN SCHEMA %I TO %I',
+                   target_schema, target_user);
+
+    -- 6. Function-level: EXECUTE
+    EXECUTE format('GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA %I TO %I',
+                   target_schema, target_user);
+
+    -- 7. Default privileges cho object mới
+    EXECUTE format(
+        'ALTER DEFAULT PRIVILEGES IN SCHEMA %I GRANT SELECT, INSERT, UPDATE ON TABLES TO %I',
+        target_schema, target_user
+    );
+    EXECUTE format(
+        'ALTER DEFAULT PRIVILEGES IN SCHEMA %I GRANT USAGE, SELECT, UPDATE ON SEQUENCES TO %I',
+        target_schema, target_user
+    );
+    EXECUTE format(
+        'ALTER DEFAULT PRIVILEGES IN SCHEMA %I GRANT EXECUTE ON FUNCTIONS TO %I',
+        target_schema, target_user
+    );
+
+END;
+$$ LANGUAGE plpgsql;
+
+
+
 
 -- Sale Application
-GRANT SELECT, INSERT, UPDATE ON ALL TABLES IN SCHEMA pos TO sale_app;
+SELECT grant_application_privileges('pos_database', 'sale_app', 'public');
 
 -- Logistic Application
-GRANT SELECT, INSERT, UPDATE ON ALL TABLES IN SCHEMA logistic TO logistic_app;
+SELECT grant_application_privileges('logistic_database', 'logistic_app', 'public');
 
 -- ERP Application
-GRANT SELECT, INSERT, UPDATE ON ALL TABLES IN SCHEMA erp TO erp_app;
+SELECT grant_application_privileges('erp_database', 'erp_app', 'public');
 
--- Role cho bảng chứa PII
-GRANT SELECT ON ALL TABLES IN SCHEMA pii TO pii_role;
 
--- Role cho view nghiệp vụ
-GRANT SELECT ON ALL TABLES IN SCHEMA biz_view TO biz_view_role;
 
 ----------------------------------------------------
--- 4. Đảm bảo không có role ngoài dự án được truy cập
-----------------------------------------------------
--- Thu hồi tất cả quyền còn sót
-REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA pos FROM PUBLIC;
-REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA logistic FROM PUBLIC;
-REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA erp FROM PUBLIC;
+
