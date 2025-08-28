@@ -9,6 +9,10 @@ class Customer:
         self.phone = phone
         self.address = address
         self.created_at = datetime.now()
+
+    def getallcustomers():
+        query = "SELECT * FROM customers"
+        return execute_query(pos_dbname, user, password, host, port, query)
         
 
 
