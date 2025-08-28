@@ -1,15 +1,29 @@
-from sqlalchemy import (
-    create_engine, Column, Integer, String, ForeignKey, DECIMAL, TIMESTAMP, func
-)
-from sqlalchemy.orm import declarative_base, sessionmaker, relationship
 from datetime import datetime
+from common import execute_query, pos_dbname, user, password, host, port
 
-class Category(Base):
-    __tablename__ = "categories"
+class Category:
+    def __init__(self, category_id, name, created_at=None, deleted_at=None):
+        self.category_id = category_id
+        self.name = name
+        self.created_at = created_at if created_at else datetime.now()
+        self.deleted_at = deleted_at
+        self.products = []  # giữ danh sách sản phẩm (Product objects)
 
-    category_id = Column(Integer, primary_key=True, autoincrement=True)
-    name = Column(String(255), nullable=False)
-    created_at = Column(TIMESTAMP, default=func.now())
-    deleted_at = Column(TIMESTAMP)
+    # =================
+    # Business Methods
+    # =================
 
-    products = relationship("Product", back_populates="category")
+    def add_product(self, product):
+        """Thêm 1 product vào category"""
+        self.products.append(product)
+
+    def remove_product(self, product_id):
+        """Xóa product theo id"""
+        self.products = [p for p in self.products if p.product_id != product_id]
+
+    def soft_delete(self):
+        """Đánh dấu category là đã xóa"""
+        self.deleted_at = datetime.now()
+
+    def __repr__(self):
+        return f"<Category(id={self.category_id}, name='{self.name}', products={len(self.products)})>"

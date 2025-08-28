@@ -1,13 +1,30 @@
+from datetime import datetime
+from common import execute_query, pos_dbname, user, password, host, port
 
+class Product:
+    def __init__(self, product_id, name, category, created_at=None, deleted_at=None):
+        self.product_id = product_id
+        self.name = name
+        self.category = category       # tham chiếu đến Category object
+        self.created_at = created_at if created_at else datetime.now()
+        self.deleted_at = deleted_at
 
-class Product(Base):
-    __tablename__ = "products"
+        # Quan hệ 1-nhiều
+        self.skus = []
 
-    product_id = Column(String(20), primary_key=True)  # Trigger sinh PROD_xxx
-    name = Column(String(255), nullable=False)
-    category_id = Column(Integer, ForeignKey("categories.category_id"), nullable=False)
-    created_at = Column(TIMESTAMP, default=func.now())
-    deleted_at = Column(TIMESTAMP)
+    # Business logic
+    def add_sku(self, sku):
+        """Thêm một SKU vào sản phẩm."""
+        self.skus.append(sku)
+        sku.product = self  # gắn ngược quan hệ
 
-    category = relationship("Category", back_populates="products")
-    skus = relationship("ProductSKU", back_populates="product")
+    def mark_deleted(self):
+        """Đánh dấu sản phẩm bị xóa (soft delete)."""
+        self.deleted_at = datetime.now()
+
+    def get_active_skus(self):
+        """Lấy danh sách SKU chưa bị xóa."""
+        return [sku for sku in self.skus if sku.deleted_at is None]
+
+    def __repr__(self):
+        return f"<Product(id={self.product_id}, name={self.name}, category={self.category.name})>"
