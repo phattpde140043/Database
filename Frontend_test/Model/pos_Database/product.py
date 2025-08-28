@@ -12,6 +12,12 @@ class Product:
         # Quan hệ 1-nhiều
         self.skus = []
 
+
+    def getall():
+        query = "Select * from products"
+        return execute_query(pos_dbname, user, password, host, port, query)
+
+
     # Business logic
     def add_sku(self, sku):
         """Thêm một SKU vào sản phẩm."""

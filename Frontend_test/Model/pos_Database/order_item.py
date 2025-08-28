@@ -13,6 +13,10 @@ class OrderItem:
     # Business logic
     # ======================
 
+    def getall():
+        query = "Select * from order_items"
+        return execute_query(pos_dbname, user, password, host, port, query)
+
     def get_total_price(self):
         """Tính tổng giá cho item"""
         return self.quantity * self.unit_price

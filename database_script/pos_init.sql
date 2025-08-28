@@ -1,3 +1,4 @@
+
 -- Creating the database
 CREATE DATABASE pos_database;
 
@@ -43,6 +44,44 @@ CREATE TRIGGER customer_id_trigger
     BEFORE INSERT ON customers
     FOR EACH ROW
     EXECUTE FUNCTION generate_customer_id();
+
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+CREATE OR REPLACE FUNCTION encrypt_customer_fields()
+RETURNS TRIGGER AS $$
+DECLARE
+    secret_key TEXT := 'my_secret_key'; -- thay bằng key bí mật của bạn
+BEGIN
+    -- Email
+    IF NEW.email IS NOT NULL THEN
+        -- Nếu dữ liệu chưa phải là mã hóa (chứa text thường), thì mã hóa
+        BEGIN
+            PERFORM pgp_sym_decrypt(NEW.email, secret_key);
+        EXCEPTION
+            WHEN others THEN
+                -- nếu giải mã lỗi => nghĩa là chưa mã hóa, tiến hành mã hóa
+                NEW.email := pgp_sym_encrypt(convert_from(NEW.email, 'UTF8'), secret_key);
+        END;
+    END IF;
+
+    -- Phone
+    IF NEW.phone IS NOT NULL THEN
+        BEGIN
+            PERFORM pgp_sym_decrypt(NEW.phone, secret_key);
+        EXCEPTION
+            WHEN others THEN
+                NEW.phone := pgp_sym_encrypt(convert_from(NEW.phone, 'UTF8'), secret_key);
+        END;
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_encrypt_customers
+BEFORE INSERT OR UPDATE ON customers
+FOR EACH ROW
+EXECUTE FUNCTION encrypt_customer_fields();
 
 
 
@@ -192,7 +231,7 @@ CREATE TABLE order_items (
     sku_id BIGINT NOT NULL REFERENCES products_sku(sku_id),
     quantity INT NOT NULL CHECK (quantity > 0),
     unit_price DECIMAL(10,2) NOT NULL CHECK (unit_price > 0),
-    order_date TIMESTAMP NOT NULL,
+    order_date TIMESTAMPTZ NOT NULL ,
 	PRIMARY KEY (order_id, order_item_id, order_date),
 	FOREIGN KEY (order_id, order_date) REFERENCES orders(order_id, order_date)
 ) PARTITION BY RANGE (order_date);
@@ -200,8 +239,6 @@ CREATE TABLE order_items (
 SELECT create_monthly_partition('order_items', 2025, 8); -- Tạo partition cho tháng 8 năm 2025
 SELECT create_monthly_partition('order_items', 2025, 9); -- Tạo partition cho tháng 9 năm 2025
 SELECT create_monthly_partition('order_items', 2025, 10); -- Tạo partition cho tháng 10 năm 2025
-
-
 
 --------------------------------------------------------------------------------
 --                             Creating indexes and views

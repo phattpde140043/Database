@@ -18,6 +18,11 @@ class Order:
     # Business logic
     # ========================
 
+    def getall():
+        query = "Select * from orders"
+        return execute_query(pos_dbname, user, password, host, port, query)
+
+
     def add_item(self, order_item):
         """Thêm OrderItem vào đơn hàng"""
         self.items.append(order_item)

@@ -10,5 +10,10 @@ class PaymentType:
         """Đổi tên phương thức thanh toán"""
         self.name = new_name
 
+    def getall():
+        query = "Select * from payment_types"
+        return execute_query(pos_dbname, user, password, host, port, query)
+
+
     def __repr__(self):
         return f"<PaymentType(id={self.payment_type_id}, name={self.name})>"

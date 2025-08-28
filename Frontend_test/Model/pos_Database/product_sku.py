@@ -17,6 +17,11 @@ class ProductSKU:
         self.product = None
         self.order_items = []
 
+    def getall():
+        query = "Select * from products_sku"
+        return execute_query(pos_dbname, user, password, host, port, query)
+
+
     # Business logic
     def mark_deleted(self):
         """Đánh dấu SKU đã bị xóa (soft delete)."""

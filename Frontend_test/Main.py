@@ -1,7 +1,7 @@
 import gradio as gr
 
 # Mảng option
-options = ["Option A", "Option B", "Option C"]
+options = ["Customer", "Category", "Product", "Order","PaymentType"]
 
 def handle_click(selected_option):
     # Trước tiên xóa nội dung label, sau đó trả về message mới

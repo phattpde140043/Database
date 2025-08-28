@@ -10,7 +10,7 @@ class Customer:
         self.address = address
         self.created_at = datetime.now()
 
-    def getallcustomers():
+    def getall():
         query = "SELECT * FROM customers"
         return execute_query(pos_dbname, user, password, host, port, query)
         

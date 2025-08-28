@@ -13,6 +13,10 @@ class Category:
     # Business Methods
     # =================
 
+    def getall():
+        query = "Select * from categories"
+        return execute_query(pos_dbname, user, password, host, port, query)
+
     def add_product(self, product):
         """Thêm 1 product vào category"""
         self.products.append(product)
