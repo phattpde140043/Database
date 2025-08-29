@@ -17,9 +17,9 @@ CREATE OR REPLACE FUNCTION insert_customer(
     p_phone VARCHAR,
     p_address VARCHAR
 )
-RETURNS BIGINT AS $$
+RETURNS TEXT AS $$
 DECLARE
-    v_customer_id BIGINT;
+    v_customer_id TEXT;
     v_exists INT;
 BEGIN
     -- Kiểm tra email có hợp lệ không
@@ -32,51 +32,27 @@ BEGIN
         RAISE EXCEPTION 'Invalid phone number: %', p_phone;
     END IF;
 
-    -- Kiểm tra email có bị trùng không
-    SELECT COUNT(*) INTO v_exists FROM customers WHERE email = p_email;
-    IF v_exists > 0 THEN
-        RAISE EXCEPTION 'Email already exists: %', p_email;
-    END IF;
-
     -- Insert khách hàng
-    INSERT INTO customers (name, email, phone, address, created_at)
-    VALUES (p_name, p_email, p_phone, p_address, now())
+    INSERT INTO customers (name, email, phone, address)
+    VALUES (p_name,encrypt_text(p_email),encrypt_text(p_phone), p_address)
     RETURNING customer_id INTO v_customer_id;
 
     RETURN v_customer_id;
 END;
 $$ LANGUAGE plpgsql;
+DROP FUNCTION update_customer(TEXT,VARCHAR,VARCHAR,VARCHAR,VARCHAR)
 
-
--- Function to read customer details by ID
-CREATE OR REPLACE FUNCTION get_customer_by_id(p_customer_id BIGINT)
-RETURNS TABLE (
-    customer_id BIGINT,
-    name VARCHAR,
-    email VARCHAR,
-    phone VARCHAR,
-    address VARCHAR,
-    created_at TIMESTAMP
-) AS $$
-BEGIN
-    RETURN QUERY
-    SELECT customer_id, name, email, phone, address, created_at
-    FROM customers
-    WHERE customer_id = p_customer_id;
-END;
-$$ LANGUAGE plpgsql;
-
--- Function to update customer details
 CREATE OR REPLACE FUNCTION update_customer(
-    p_customer_id BIGINT,
+    p_customer_id TEXT,
     p_name VARCHAR DEFAULT NULL,
     p_email VARCHAR DEFAULT NULL,
     p_phone VARCHAR DEFAULT NULL,
     p_address VARCHAR DEFAULT NULL
 )
-RETURNS VOID AS $$
+RETURNS INT AS $$
 DECLARE
     v_exists INT;
+    v_updated INT;
 BEGIN
     -- Kiểm tra customer tồn tại
     SELECT COUNT(*) INTO v_exists FROM customers WHERE customer_id = p_customer_id;
@@ -84,32 +60,20 @@ BEGIN
         RAISE EXCEPTION 'Customer not found: %', p_customer_id;
     END IF;
 
-    -- Update linh hoạt (chỉ update nếu field khác NULL)
+    -- Update linh hoạt
     UPDATE customers
     SET 
-        name = COALESCE(p_name, name),
-        email = COALESCE(p_email, email),
-        phone = COALESCE(p_phone, phone),
-        address = COALESCE(p_address, address),
+        name = p_name,
+        email = encrypt_text(p_email),
+        phone = encrypt_text(p_phone),
+        address = p_address,
         updated_at = now()
     WHERE customer_id = p_customer_id;
-END;
-$$ LANGUAGE plpgsql;
 
--- Function to delete a customer by ID
-CREATE OR REPLACE FUNCTION soft_delete_customer(p_customer_id BIGINT)
-RETURNS VOID AS $$
-DECLARE
-    v_exists INT;
-BEGIN
-    SELECT COUNT(*) INTO v_exists FROM customers WHERE customer_id = p_customer_id;
-    IF v_exists = 0 THEN
-        RAISE EXCEPTION 'Customer not found: %', p_customer_id;
-    END IF;
+    -- Lấy số row bị ảnh hưởng
+    GET DIAGNOSTICS v_updated = ROW_COUNT;
 
-    UPDATE customers
-    SET deleted_at = now()
-    WHERE customer_id = p_customer_id;
+    RETURN v_updated;
 END;
 $$ LANGUAGE plpgsql;
 -----------------------------------------------------------------------------------
@@ -457,7 +421,8 @@ BEGIN
     RETURN v_category_id;
 END;
 $$ LANGUAGE plpgsql;
-
+select * from categories
+select update_category(6,'shopping')
 -- update category
 CREATE OR REPLACE FUNCTION update_category(
     p_category_id BIGINT,
@@ -497,17 +462,29 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- get all categories
-CREATE OR REPLACE FUNCTION get_all_categories()
-RETURNS TABLE(category_id BIGINT, name VARCHAR, created_at TIMESTAMP) AS $$
+-- Soft delete category
+CREATE OR REPLACE FUNCTION soft_delete_category(
+    p_category_id BIGINT
+)
+RETURNS VOID AS $$
+DECLARE
+    v_exists INT;
 BEGIN
-    RETURN QUERY
-    SELECT category_id, name, created_at
-    FROM categories
-    WHERE deleted_at IS NULL
-    ORDER BY created_at DESC;
+    -- Kiểm tra category tồn tại và chưa bị xóa
+    SELECT COUNT(*) INTO v_exists 
+    FROM categories 
+    WHERE category_id = p_category_id AND deleted_at IS NULL;
+    IF v_exists = 0 THEN
+        RAISE EXCEPTION 'Category not found or already deleted: %', p_category_id;
+    END IF;
+
+    -- Soft delete (đánh dấu deleted_at)
+    UPDATE categories
+    SET deleted_at = NOW()
+    WHERE category_id = p_category_id;
 END;
 $$ LANGUAGE plpgsql;
+
 
 ------------------------------------------------------------------------------------
 --                      Orders Table CRUD Operations

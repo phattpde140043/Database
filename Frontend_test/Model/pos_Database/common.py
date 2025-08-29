@@ -9,18 +9,6 @@ host="localhost"
 port=5432
 
 def execute_query(dbname, user, password, host, port, sql, params=None):
-    """
-    Hàm thực thi query chung, trả về tất cả rows.
-    
-    :param dbname: tên database
-    :param user: user login
-    :param password: mật khẩu
-    :param host: địa chỉ host
-    :param port: cổng kết nối
-    :param sql: câu SQL query
-    :param params: tuple tham số (nếu có), mặc định None
-    :return: list các rows (tuple)
-    """
     try:
         conn = pgcon.connect(
             dbname=dbname,
@@ -30,11 +18,31 @@ def execute_query(dbname, user, password, host, port, sql, params=None):
             port=port
         )
         cur = conn.cursor()
-        cur.execute(sql, params)  # params cho câu lệnh có placeholder (%s)
-        rows = cur.fetchall()
+        print(f"[SQL] {sql} | Params: {params}")  # log câu query
+
+        cur.execute(sql, params)
+        print(f"[DEBUG] Rowcount sau execute: {cur.rowcount}")
+
+        try:
+            rows = cur.fetchall()
+            print(f"[DEBUG] Fetchall: {rows}")
+        except Exception:
+            rows = None
+            print("[DEBUG] Không có kết quả để fetch.")
+
+        conn.commit()
+        print("[DEBUG] Commit thành công ✅")
+
         cur.close()
         conn.close()
         return rows
+
     except Exception as e:
         print("Lỗi kết nối hoặc truy vấn:", e)
+        try:
+            conn.rollback()
+            print("[DEBUG] Rollback do lỗi ❌")
+        except:
+            pass
         return None
+

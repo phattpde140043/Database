@@ -257,4 +257,7 @@ SELECT grant_application_privileges('erp_database', 'erp_app', 'public');
 
 
 ----------------------------------------------------
-
+Select * from Customers where customer_id = 'CUST_000015'
+SELECT customer_id, name, email, phone, address, created_at FROM customers where customer_id = 'CUST_000003'
+SELECT update_customer('CUST_000007','John Doey', 'hdajdn@yahoo.com', '0304967890', '123 Main St, City, Country')
+Select * from audit_log

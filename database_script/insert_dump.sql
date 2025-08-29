@@ -63,4 +63,5 @@ Select * from products_sku
 Select * from orders
 Select * from order_items
 Select * from categories
+Select * from payment_types
 

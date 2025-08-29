@@ -47,44 +47,50 @@ CREATE TRIGGER customer_id_trigger
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
+-- Hàm tái sử dụng để mã hóa text
+CREATE OR REPLACE FUNCTION encrypt_text(p_text VARCHAR)
+RETURNS BYTEA AS $$
+DECLARE
+    secret_key TEXT := 'my_secret_key';
+    v_encrypted BYTEA;
+BEGIN
+    IF p_text IS NULL THEN
+        RETURN NULL;
+    END IF;
+
+    v_encrypted := pgp_sym_encrypt(p_text, secret_key);
+    RETURN v_encrypted;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Trigger function sử dụng lại encrypt_text
 CREATE OR REPLACE FUNCTION encrypt_customer_fields()
 RETURNS TRIGGER AS $$
-DECLARE
-    secret_key TEXT := 'my_secret_key'; -- thay bằng key bí mật của bạn
 BEGIN
     -- Email
     IF NEW.email IS NOT NULL THEN
-        -- Nếu dữ liệu chưa phải là mã hóa (chứa text thường), thì mã hóa
-        BEGIN
-            PERFORM pgp_sym_decrypt(NEW.email, secret_key);
-        EXCEPTION
-            WHEN others THEN
-                -- nếu giải mã lỗi => nghĩa là chưa mã hóa, tiến hành mã hóa
-                NEW.email := pgp_sym_encrypt(convert_from(NEW.email, 'UTF8'), secret_key);
-        END;
+        NEW.email := encrypt_text(NEW.email::text);
     END IF;
 
     -- Phone
     IF NEW.phone IS NOT NULL THEN
-        BEGIN
-            PERFORM pgp_sym_decrypt(NEW.phone, secret_key);
-        EXCEPTION
-            WHEN others THEN
-                NEW.phone := pgp_sym_encrypt(convert_from(NEW.phone, 'UTF8'), secret_key);
-        END;
+        NEW.phone := encrypt_text(NEW.phone::text);
     END IF;
 
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
+-- Trigger
 CREATE TRIGGER trg_encrypt_customers
 BEFORE INSERT OR UPDATE ON customers
 FOR EACH ROW
 EXECUTE FUNCTION encrypt_customer_fields();
 
 
-
+Select * from customers
+INSERT INTO customers (name, email, phone, address)
+VALUES ('Nguyen Van ZA', 'langtun@yahoo.com', '0973429584', '35 Do Huy Du, Ha Noi');
 
 --------------------------------------------------------------------------------
 --                             Creating categories table
