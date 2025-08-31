@@ -25,7 +25,7 @@ CREATE TRIGGER product_id_trigger
 
 --------------------------------------------------------------------------------
 -- insert product
-CREATE OR REPLACE PROCEDURE insert_product(
+CREATE OR REPLACE FUNCTION insert_product(
     p_name VARCHAR,
     p_category_id BIGINT,
     p_sku VARCHAR,
@@ -33,6 +33,7 @@ CREATE OR REPLACE PROCEDURE insert_product(
     p_color VARCHAR DEFAULT NULL,
     p_size VARCHAR DEFAULT NULL
 )
+RETURNS VARCHAR
 LANGUAGE plpgsql
 AS $$
 DECLARE
@@ -47,8 +48,11 @@ BEGIN
     INSERT INTO products_sku(sku, product_id, color, size, price)
     VALUES (p_sku, v_product_id, p_color, p_size, p_price);
 
+    -- Trả về product_id vừa tạo
+    RETURN v_product_id;
 END;
 $$;
+
 
 --------------------------------------------------------------------------------------------------------
 -- Function to update product details

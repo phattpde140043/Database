@@ -3,11 +3,14 @@
     "customers": {
       "customer_id": { "type": "VARCHAR(20)", "PK": true, "auto_generated": true, "trigger": "generate_customer_id", "description": "Unique identifier for customers, auto-generated as CUST_XXX via trigger" },
       "name": { "type": "VARCHAR(255)", "not_null": true, "constraints": {"check": "LENGTH(name) > 0"}, "description": "Full name of the customer" },
-      "email": { "type": "BYTEA", "unique": true, "indexed": true, "not_null": true, "constraints": {"check": "email ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\\\.[A-Za-z]{2,}$'"}, "description": "Unique email address of the customer" },
-      "phone": { "type": "VARCHAR(20)", "unique": true, "indexed": true, "not_null": true, "constraints": {"check": "phone ~* '^\\\\+?[0-9]{7,15}$'"}, "description": "Unique phone number of the customer" },
+      "email": { "type": "BYTEA", "unique": true, "indexed": true, "not_null": true, "description": "Unique email address of the customer" },
+      "phone": { "type": "BYTEA", "unique": true, "indexed": true, "not_null": true, "description": "Unique phone number of the customer" },
       "address": { "type": "VARCHAR(500)", "not_null": true, "description": "Customer's primary address" },
-      "created_at": { "type": "TIMESTAMP", "default_value": "CURRENT_TIMESTAMP", "auto_generated": true, "not_null": true, "description": "Timestamp of customer record creation" },
-      "updated_at": { "type": "TIMESTAMP", "default_value": "CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP", "auto_generated": true, "not_null": true, "description": "Timestamp of last update to customer record" }
+      "created_at": { "type": "TIMESTAMP", "default_value": "CURRENT_TIMESTAMP", "auto_generated": true, "not_null": true,"constraint":"check{created_at <= now()}", "description": "Timestamp of customer record creation" },
+      "updated_at": { "type": "TIMESTAMP", "default_value": "CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP","constraint":"check{updated_at <= now()}", "description": "Timestamp of last update to customer record" },
+      "triggers": {"customers_updated_at_trigger": "Auto-update updated_at column before update","customer_id_trigger": "Generate customer_id before insert","trg_encrypt_customers": "Encrypt email and phone before insert or update"},
+      "functions": {"customer_update_set_timestamp": "Set updated_at to current timestamp","generate_customer_id": "Generate sequential customer_id in format CUST_XXXXXX","encrypt_customer_fields": "Encrypt email and phone fields before insert/update","insert_customer": "Insert new customer with validations and encryption","update_customer": "Update existing customer with validations and encryption"},
+      "indexes": {"customers_email_idx": "Hash index on email","customers_phone_idx": "Hash index on phone","customers_name_idx": "Hash index on name"}
     },
     "products": {
       "product_id": { "type": "VARCHAR(20)", "PK": true, "not_null": true, "auto_generated": true, "trigger": "generate_product_id", "description": "Unique identifier for products, auto-generated as PROD_XXX via trigger" },

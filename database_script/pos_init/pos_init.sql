@@ -74,10 +74,6 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-SELECT create_monthly_partition('orders', 2025, 8); -- Tạo partition cho tháng 8 năm 2025
-SELECT create_monthly_partition('orders', 2025, 9); -- Tạo partition cho tháng 9 năm 2025
-SELECT create_monthly_partition('orders', 2025, 10); -- Tạo partition cho tháng 10 năm 2025
-
 --------------------------------------------------------------------------------
 -- Creating product_view
 CREATE VIEW product_view AS
@@ -203,8 +199,3 @@ FOR EACH ROW EXECUTE FUNCTION audit_dml_trigger();
 CREATE TRIGGER payment_types_audit
 AFTER INSERT OR UPDATE OR DELETE ON payment_types
 FOR EACH ROW EXECUTE FUNCTION audit_dml_trigger();
-
---------------------------------------------------------------------------------
---                               Retention policy
-
-
