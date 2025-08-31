@@ -2,6 +2,7 @@ from datetime import datetime
 from common import execute_query, pos_dbname, user, password, host, port
 import pandas as pd
 
+
 class Category:
     def __init__(self, category_id, name, created_at=None, deleted_at=None):
         self.category_id = category_id
@@ -47,7 +48,7 @@ class Category:
         return pd.DataFrame(data)
 
     @staticmethod
-    def add_product(category_name):
+    def add_category(category_name):
         query = f"""select insert_category('{category_name}');"""
         result = execute_query(pos_dbname, user, password, host, port, query)
         return result if result else None
@@ -57,6 +58,7 @@ class Category:
         query = f"""select update_category({category_id},'{category_name}');"""
         result = execute_query(pos_dbname, user, password, host, port, query)
         return result if result else None
+    
 
     @staticmethod
     def soft_delete(category_id):

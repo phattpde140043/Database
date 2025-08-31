@@ -12,25 +12,38 @@ class Product:
         # Quan hệ 1-nhiều
         self.skus = []
 
-
+    @staticmethod
     def getall():
-        query = "Select * from products"
+        query = "SELECT p.product_id, p.name AS product_name, c.name AS category_name, p.price FROM products p JOIN categories c ON p.category_id = c.category_id;"
         return execute_query(pos_dbname, user, password, host, port, query)
 
+    @staticmethod
+    def get_product_by_categories_id(category_id):
+        query = f"SELECT p.product_id, p.name AS product_name, c.name AS category_name, p.price FROM products p JOIN categories c ON p.category_id = c.category_id WHERE c.category_id = {category_id};"
+        return execute_query(pos_dbname, user, password, host, port, query)
 
-    # Business logic
-    def add_sku(self, sku):
-        """Thêm một SKU vào sản phẩm."""
-        self.skus.append(sku)
-        sku.product = self  # gắn ngược quan hệ
+    @staticmethod
+    def get_product_by_id(product_id):
+        query = f"SELECT p.product_id, p.name AS product_name, c.name AS category_name, p.price FROM products p JOIN categories c ON p.category_id = c.category_id WHERE p.product_id = '{product_id}';"
+        return execute_query(pos_dbname, user, password, host, port, query)
+    
+    @staticmethod
+    def get_product_by_name(product_name):
+        query = f"SELECT p.product_id, p.name AS product_name, c.name AS category_name, p.price FROM products p JOIN categories c ON p.category_id = c.category_id WHERE p.name ILIKE '%{product_name}%';"
+        return execute_query(pos_dbname, user, password, host, port, query)
+    
+    def soft_delete(product_id):
+        query= f"select soft_delete_product('{product_id}')"
+        return execute_query(pos_dbname, user, password, host, port, query)
 
-    def mark_deleted(self):
-        """Đánh dấu sản phẩm bị xóa (soft delete)."""
-        self.deleted_at = datetime.now()
+    def add_product(product_id,name,category_id):
+        query = f"select update_produt('{product_id}','{name}',{category_id})"
+        return execute_query(pos_dbname, user, password, host, port, query)
 
-    def get_active_skus(self):
-        """Lấy danh sách SKU chưa bị xóa."""
-        return [sku for sku in self.skus if sku.deleted_at is None]
+    @staticmethod
+    def update_product(product_id,name,category_id,sku,price,color,size):
+        query = f"select update_product('{product_id}','{name}',{category_id},'{sku}',{price},'{color}','{size}')"
+        return execute_query(pos_dbname, user, password, host, port, query)
 
     def __repr__(self):
         return f"<Product(id={self.product_id}, name={self.name}, category={self.category.name})>"

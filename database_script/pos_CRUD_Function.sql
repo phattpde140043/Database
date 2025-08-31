@@ -81,54 +81,61 @@ $$ LANGUAGE plpgsql;
 ------------------------------------------------------------------------------------
 --                      Product Table CRUD Operations
 -----------------------------------------------------------------------------------
--- insert product
-CREATE OR REPLACE FUNCTION insert_product(
-    p_name VARCHAR,
-    p_category_id BIGINT
-)
-RETURNS VARCHAR AS $$
+-- Soft-delete product
+CREATE OR REPLACE PROCEDURE soft_delete_product(p_product_id VARCHAR)
+LANGUAGE plpgsql
+AS $$
 DECLARE
-    v_product_id VARCHAR(20);
-    v_exists INT;
+    v_active_sku_count INT;
 BEGIN
-    -- Kiểm tra tên sản phẩm hợp lệ
-    IF p_name IS NULL OR LENGTH(TRIM(p_name)) = 0 THEN
-        RAISE EXCEPTION 'Product name cannot be empty';
+    -- Kiểm tra product tồn tại
+    IF NOT EXISTS (SELECT 1 FROM products WHERE product_id = p_product_id AND deleted_at IS NULL) THEN
+        RAISE EXCEPTION 'Product % not found or already deleted', p_product_id;
     END IF;
 
-    -- Kiểm tra category có tồn tại không
-    SELECT COUNT(*) INTO v_exists FROM categories WHERE category_id = p_category_id;
-    IF v_exists = 0 THEN
-        RAISE EXCEPTION 'Category not found: %', p_category_id;
+    -- Kiểm tra SKU active
+    SELECT COUNT(*) INTO v_active_sku_count
+    FROM products_sku
+    WHERE product_id = p_product_id
+      AND deleted_at IS NULL;
+
+    IF v_active_sku_count > 0 THEN
+        RAISE EXCEPTION 'Cannot delete product % because it still has active SKUs', p_product_id;
     END IF;
 
-    -- Insert (product_id sẽ tự sinh bởi trigger generate_product_id)
-    INSERT INTO products (name, category_id)
+    -- Soft delete product
+    UPDATE products
+    SET deleted_at = NOW()
+    WHERE product_id = p_product_id;
+END;
+$$;
+
+-- insert product
+CREATE OR REPLACE PROCEDURE insert_product(
+    p_name VARCHAR,
+    p_category_id BIGINT,
+    p_sku VARCHAR,
+    p_price DECIMAL(10,2),
+    p_color VARCHAR DEFAULT NULL,
+    p_size VARCHAR DEFAULT NULL
+)
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_product_id VARCHAR;
+BEGIN
+    -- Insert product (product_id được trigger generate)
+    INSERT INTO products(name, category_id)
     VALUES (p_name, p_category_id)
     RETURNING product_id INTO v_product_id;
 
-    RETURN v_product_id;
-END;
-$$ LANGUAGE plpgsql;
+    -- Insert ít nhất 1 SKU (dùng tham số truyền vào)
+    INSERT INTO products_sku(sku, product_id, color, size, price)
+    VALUES (p_sku, v_product_id, p_color, p_size, p_price);
 
-
--- Function to read product details by ID
-CREATE OR REPLACE FUNCTION get_product_by_id(p_product_id VARCHAR)
-RETURNS TABLE (
-    product_id VARCHAR,
-    name VARCHAR,
-    category_id BIGINT,
-    created_at TIMESTAMP,
-    updated_at TIMESTAMP,
-    deleted_at TIMESTAMP
-) AS $$
-BEGIN
-    RETURN QUERY
-    SELECT product_id, name, category_id, created_at, updated_at, deleted_at
-    FROM products
-    WHERE product_id = p_product_id;
 END;
-$$ LANGUAGE plpgsql;   
+$$;
+
 
 -- Function to update product details
 CREATE OR REPLACE FUNCTION update_product(
@@ -163,74 +170,11 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Function to delete a product by ID (soft delete)
-CREATE OR REPLACE FUNCTION soft_delete_product(p_product_id VARCHAR)
-RETURNS VOID AS $$
-DECLARE
-    v_exists INT;
-BEGIN
-    SELECT COUNT(*) INTO v_exists FROM products WHERE product_id = p_product_id AND deleted_at IS NULL;
-    IF v_exists = 0 THEN
-        RAISE EXCEPTION 'Product not found or already deleted: %', p_product_id;
-    END IF;
-
-    UPDATE products
-    SET deleted_at = now()
-    WHERE product_id = p_product_id;
-END;
-$$ LANGUAGE plpgsql;
-
--- Function to restore a soft-deleted product
-CREATE OR REPLACE FUNCTION restore_product(p_product_id VARCHAR)
-RETURNS VOID AS $$
-DECLARE
-    v_exists INT;
-BEGIN
-    SELECT COUNT(*) INTO v_exists FROM products WHERE product_id = p_product_id AND deleted_at IS NOT NULL;
-    IF v_exists = 0 THEN
-        RAISE EXCEPTION 'Product not found or not deleted: %', p_product_id;
-    END IF;
-
-    UPDATE products
-    SET deleted_at = NULL
-    WHERE product_id = p_product_id;
-END;
-$$ LANGUAGE plpgsql;
-
--- search products by name (case insensitive, partial match)
-CREATE OR REPLACE FUNCTION search_products_by_name(p_name VARCHAR)
-RETURNS TABLE (
-    product_id VARCHAR,
-    name VARCHAR,
-    category_id BIGINT,
-    created_at TIMESTAMP,
-    updated_at TIMESTAMP,
-    deleted_at TIMESTAMP
-) AS $$
-BEGIN
-    RETURN QUERY
-    SELECT product_id, name, category_id, created_at, updated_at, deleted_at
-    FROM products
-    WHERE name ILIKE '%' || p_name || '%' AND deleted_at IS NULL;
-END;
-$$ LANGUAGE plpgsql;
-
--- get all products by category
-CREATE OR REPLACE FUNCTION get_products_by_category(p_category_id BIGINT)
-RETURNS TABLE(product_id VARCHAR, name VARCHAR, created_at TIMESTAMP) AS $$
-BEGIN
-    RETURN QUERY
-    SELECT product_id, name, created_at
-    FROM products
-    WHERE category_id = p_category_id
-      AND deleted_at IS NULL
-    ORDER BY created_at DESC;
-END;
-$$ LANGUAGE plpgsql;
 
 ------------------------------------------------------------------------------------
 --                      Product SKU Table CRUD Operations
 -----------------------------------------------------------------------------------
+
 -- Insert SKU
 CREATE OR REPLACE FUNCTION insert_sku(
     p_sku VARCHAR,
@@ -334,44 +278,6 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-
--- restore soft-deleted SKU
-CREATE OR REPLACE FUNCTION restore_sku(p_sku_id BIGINT)
-RETURNS VOID AS $$
-DECLARE
-    v_exists INT;
-BEGIN
-    SELECT COUNT(*) INTO v_exists FROM products_sku WHERE sku_id = p_sku_id AND deleted_at IS NOT NULL;
-    IF v_exists = 0 THEN
-        RAISE EXCEPTION 'SKU not found or not deleted: %', p_sku_id;
-    END IF;
-
-    UPDATE products_sku
-    SET deleted_at = NULL
-    WHERE sku_id = p_sku_id;
-END;
-$$ LANGUAGE plpgsql;
-
--- get SKU by product_id
-CREATE OR REPLACE FUNCTION get_skus_by_product_id(p_product_id VARCHAR)
-RETURNS TABLE (
-    sku_id BIGINT,
-    sku VARCHAR,
-    color VARCHAR,
-    size VARCHAR,
-    price DECIMAL(10,2),
-    created_at TIMESTAMP,
-    updated_at TIMESTAMP,
-    deleted_at TIMESTAMP
-) AS $$
-BEGIN
-    RETURN QUERY
-    SELECT sku_id, sku, color, size, price, created_at, updated_at, deleted_at
-    FROM products_sku
-    WHERE product_id = p_product_id AND deleted_at IS NULL;
-END;
-$$ LANGUAGE plpgsql;
-
 -- get SKU by price range
 
 CREATE OR REPLACE FUNCTION search_skus_by_price(p_min DECIMAL, p_max DECIMAL)
@@ -421,8 +327,9 @@ BEGIN
     RETURN v_category_id;
 END;
 $$ LANGUAGE plpgsql;
-select * from categories
-select update_category(6,'shopping')
+
+
+
 -- update category
 CREATE OR REPLACE FUNCTION update_category(
     p_category_id BIGINT,
