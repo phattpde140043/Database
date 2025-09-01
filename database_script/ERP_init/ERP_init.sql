@@ -4,6 +4,9 @@ CREATE DATABASE erp_database;
 -- Connecting to the database
 \connect erp_database;
 
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+
 -- Function tạo partition theo tháng cho bảng orders
 CREATE OR REPLACE FUNCTION create_monthly_partition(parent_table TEXT, year INT, month INT)
 RETURNS void AS $$

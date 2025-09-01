@@ -5,6 +5,9 @@ CREATE DATABASE pos_database;
 -- Connecting to the database
 \connect pos_database;
 
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+
 --------------------------------------------------------------------------------
 -- Hàm tái sử dụng để mã hóa text
 CREATE OR REPLACE FUNCTION encrypt_text(p_text VARCHAR)
@@ -22,23 +25,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Trigger function sử dụng lại encrypt_text
-CREATE OR REPLACE FUNCTION encrypt_customer_fields()
-RETURNS TRIGGER AS $$
-BEGIN
-    -- Email
-    IF NEW.email IS NOT NULL THEN
-        NEW.email := encrypt_text(NEW.email::text);
-    END IF;
 
-    -- Phone
-    IF NEW.phone IS NOT NULL THEN
-        NEW.phone := encrypt_text(NEW.phone::text);
-    END IF;
-
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
 
 --------------------------------------------------------------------------------
 -- Function tạo partition theo tháng cho bảng orders

@@ -6,10 +6,11 @@ CREATE TABLE purchase_order_items (
     product_id VARCHAR(20) NOT NULL,
     quantity INT NOT NULL CHECK (quantity > 0),
     unit_price DECIMAL(10,2) NOT NULL CHECK (unit_price > 0),
-    order_date TIMESTAMPTZ NOT NULL CHECK (order_date <= CURRENT_TIMESTAMP),
+    order_date TIMESTAMPTZ NOT NULL DEFAULT now() CHECK (order_date <= CURRENT_TIMESTAMP),
     PRIMARY KEY (po_item_id, order_date),
     FOREIGN KEY (po_id, order_date) REFERENCES purchase_orders(po_id, order_date)
 ) PARTITION BY RANGE (order_date);
+
 
 -------------------------------------------------------------------------------
 -- Creating sub-partitions with HASH on po_id
@@ -28,7 +29,7 @@ CREATE OR REPLACE FUNCTION insert_purchase_order_item(
     p_product_id VARCHAR,
     p_quantity INT,
     p_unit_price DECIMAL(10,2),
-    p_order_date TIMESTAMPTZ
+    p_order_date TIMESTAMPTZ DEFAULT now()
 )
 RETURNS BIGINT AS $$
 DECLARE
@@ -43,7 +44,14 @@ BEGIN
         RAISE EXCEPTION 'Unit price must be > 0';
     END IF;
 
-    -- Inse
+    -- Insert record
+    INSERT INTO purchase_order_items (po_id, product_id, quantity, unit_price, order_date)
+    VALUES (p_po_id, p_product_id, p_quantity, p_unit_price, p_order_date)
+    RETURNING po_item_id INTO v_po_item_id;
+
+    RETURN v_po_item_id;
+END;
+$$ LANGUAGE plpgsql;
 
 -- ==========================================
 -- Function: Update purchase_order_item

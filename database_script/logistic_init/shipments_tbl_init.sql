@@ -51,12 +51,12 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-
+Select * from shipments;
 -- Insert shipment mới (tự động vào partition 2025-09)
 SELECT insert_shipment(
     p_order_id := 101,
     p_warehouse_id := 1,
-    p_shipment_date := '2025-09-02 09:30:00+07',
+    p_shipment_date := '2025-09-01 09:30:00+07',
     p_status := 'in_transit'
 );
 
