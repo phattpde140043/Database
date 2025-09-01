@@ -5,3 +5,60 @@ CREATE TABLE accounts (
     account_name VARCHAR(255) NOT NULL CHECK (LENGTH(account_name) > 0),
     account_type VARCHAR(50) NOT NULL
 );
+-- ==========================================
+-- Function: Insert new account
+-- ==========================================
+CREATE OR REPLACE FUNCTION insert_account(
+    p_account_name VARCHAR,
+    p_account_type VARCHAR
+)
+RETURNS BIGINT AS $$
+DECLARE
+    v_account_id BIGINT;
+BEGIN
+    -- Validate dữ liệu
+    IF p_account_name IS NULL OR LENGTH(TRIM(p_account_name)) = 0 THEN
+        RAISE EXCEPTION 'Account name cannot be empty';
+    END IF;
+
+    IF p_account_type IS NULL OR LENGTH(TRIM(p_account_type)) = 0 THEN
+        RAISE EXCEPTION 'Account type cannot be empty';
+    END IF;
+
+    -- Insert
+    INSERT INTO accounts(account_name, account_type)
+    VALUES (p_account_name, p_account_type)
+    RETURNING account_id INTO v_account_id;
+
+    RETURN v_account_id;
+END;
+$$ LANGUAGE plpgsql;
+
+-- ==========================================
+-- Function: Update account info
+-- ==========================================
+CREATE OR REPLACE FUNCTION update_account(
+    p_account_id BIGINT,
+    p_account_name VARCHAR DEFAULT NULL,
+    p_account_type VARCHAR DEFAULT NULL
+)
+RETURNS VOID AS $$
+BEGIN
+    UPDATE accounts
+    SET 
+        account_name = COALESCE(p_account_name, account_name),
+        account_type = COALESCE(p_account_type, account_type)
+    WHERE account_id = p_account_id;
+
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Account % not found', p_account_id;
+    END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+
+-- Insert account mới
+SELECT insert_account('Main Account', 'Savings');
+
+-- Update account
+SELECT update_account(1, p_account_name := 'Updated Account');

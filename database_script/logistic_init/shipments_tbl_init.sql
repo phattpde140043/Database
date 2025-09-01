@@ -17,3 +17,46 @@ SELECT create_monthly_partition('shipments', 2025, 10); -- Tạo partition cho t
 -------------------------------------------------------------------------------
 --                              Creating indexes
 CREATE INDEX shipments_order_id_idx ON shipments (order_id);
+
+-----------------------------------------------------------------------------
+-- ==========================================
+-- Function: Insert shipment
+-- ==========================================
+CREATE OR REPLACE FUNCTION insert_shipment(
+    p_order_id BIGINT,
+    p_warehouse_id BIGINT,
+    p_shipment_date TIMESTAMPTZ DEFAULT now(),
+    p_status VARCHAR DEFAULT 'pending'
+)
+RETURNS BIGINT AS $$
+DECLARE
+    v_shipment_id BIGINT;
+BEGIN
+    -- Validate status
+    IF p_status NOT IN ('pending', 'in_transit', 'delivered', 'cancelled') THEN
+        RAISE EXCEPTION 'Invalid status value: %', p_status;
+    END IF;
+
+    -- Validate thời gian
+    IF p_shipment_date > now() THEN
+        RAISE EXCEPTION 'Shipment date cannot be in the future';
+    END IF;
+
+    -- Insert dữ liệu
+    INSERT INTO shipments(order_id, warehouse_id, shipment_date, status)
+    VALUES (p_order_id, p_warehouse_id, p_shipment_date, p_status)
+    RETURNING shipment_id INTO v_shipment_id;
+
+    RETURN v_shipment_id;
+END;
+$$ LANGUAGE plpgsql;
+
+
+-- Insert shipment mới (tự động vào partition 2025-09)
+SELECT insert_shipment(
+    p_order_id := 101,
+    p_warehouse_id := 1,
+    p_shipment_date := '2025-09-02 09:30:00+07',
+    p_status := 'in_transit'
+);
+
