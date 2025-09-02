@@ -46,8 +46,8 @@ RETURNS VOID AS $$
 BEGIN
     UPDATE accounts
     SET 
-        account_name = COALESCE(p_account_name, account_name),
-        account_type = COALESCE(p_account_type, account_type)
+        account_name = p_account_name,
+        account_type = p_account_type
     WHERE account_id = p_account_id;
 
     IF NOT FOUND THEN
@@ -56,9 +56,9 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-
+Select * from accounts
 -- Insert account mới
 SELECT insert_account('Main Account', 'Savings');
 
 -- Update account
-SELECT update_account(1, p_account_name := 'Updated Account');
+SELECT update_account(1,'Cash account', 'asset');

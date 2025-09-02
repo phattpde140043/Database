@@ -11,6 +11,31 @@ CREATE TABLE suppliers (
 );
 ------------------------------------------------------------
 CREATE INDEX suppliers_name_idx ON suppliers (name);
+------------------------------------------------------------
+-- Trigger function sử dụng lại encrypt_text
+CREATE OR REPLACE FUNCTION encrypt_supplier_fields()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- Email
+    IF NEW.email IS NOT NULL THEN
+        NEW.email := encrypt_text(NEW.email::text);
+    END IF;
+
+     -- Phone
+    IF NEW.phone IS NOT NULL THEN
+        NEW.phone := encrypt_text(NEW.phone::text);
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+--------------------------------------------------------------------------------
+-- Creating trigger to encrypt email and phone
+CREATE TRIGGER trg_supplier_employees
+BEFORE INSERT OR UPDATE ON suppliers
+FOR EACH ROW
+EXECUTE FUNCTION encrypt_supplier_fields();
+
 
 -- ==========================================
 -- Function: Insert new supplier

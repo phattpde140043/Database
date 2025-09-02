@@ -21,9 +21,9 @@ CREATE INDEX purchase_orders_supplier_id_idx ON purchase_orders (supplier_id);
 -- ==========================================
 CREATE OR REPLACE FUNCTION insert_purchase_order(
     p_supplier_id BIGINT,
+	p_total_amount DECIMAL(12,2),
     p_order_date TIMESTAMPTZ DEFAULT now(),
-    p_status VARCHAR DEFAULT 'draft',
-    p_total_amount DECIMAL(12,2)
+	p_status VARCHAR DEFAULT 'draft'
 )
 RETURNS BIGINT AS $$
 DECLARE

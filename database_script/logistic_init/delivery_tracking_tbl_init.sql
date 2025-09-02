@@ -83,6 +83,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+select * from delivery_tracking;
 
 -- Insert bản ghi mới
 SELECT insert_delivery_tracking(

@@ -37,7 +37,7 @@ CREATE OR REPLACE FUNCTION update_department(
 RETURNS VOID AS $$
 BEGIN
     UPDATE departments
-    SET name = COALESCE(p_name, name)
+    SET name = p_name
     WHERE department_id = p_department_id;
 
     -- Nếu không tìm thấy record
@@ -47,6 +47,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+Select * from departments
 
 -- Insert department mới
 SELECT insert_department('Sales');

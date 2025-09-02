@@ -23,11 +23,11 @@ CREATE INDEX financial_transactions_transaction_date_idx ON financial_transactio
 -- Function: Insert new financial_transaction
 -- ==========================================
 CREATE OR REPLACE FUNCTION insert_financial_transaction(
-    p_transaction_date TIMESTAMPTZ,
     p_account_id BIGINT,
     p_amount DECIMAL(12,2),
     p_type VARCHAR,
-    p_status VARCHAR
+    p_status VARCHAR,
+	p_transaction_date TIMESTAMPTZ DEFAULT now()
 )
 RETURNS BIGINT AS $$
 DECLARE
@@ -60,7 +60,6 @@ $$ LANGUAGE plpgsql;
 -- ==========================================
 CREATE OR REPLACE FUNCTION update_financial_transaction(
     p_transaction_id BIGINT,
-    p_transaction_date TIMESTAMPTZ,
     p_amount DECIMAL(12,2) DEFAULT NULL,
     p_type VARCHAR DEFAULT NULL,
     p_status VARCHAR DEFAULT NULL
@@ -68,14 +67,13 @@ CREATE OR REPLACE FUNCTION update_financial_transaction(
 RETURNS VOID AS $$
 BEGIN
     UPDATE financial_transactions
-    SET amount = COALESCE(p_amount, amount),
-        type   = COALESCE(p_type, type),
-        status = COALESCE(p_status, status)
-    WHERE transaction_id = p_transaction_id
-      AND transaction_date = p_transaction_date; -- xác định đúng partition
+    SET amount = p_amount,
+        type   = p_type,
+        status = p_status
+    WHERE transaction_id = p_transaction_id;
 
     IF NOT FOUND THEN
-        RAISE EXCEPTION 'Transaction % at % not found', p_transaction_id, p_transaction_date;
+        RAISE EXCEPTION 'Transaction % not found', p_transaction_id;
     END IF;
 END;
 $$ LANGUAGE plpgsql;
@@ -83,17 +81,18 @@ $$ LANGUAGE plpgsql;
 
 -- Insert transaction
 SELECT insert_financial_transaction(
-    p_transaction_date := '2025-08-20'::timestamptz,
     p_account_id := 1,
     p_amount := 1500.00,
     p_type := 'debit',
-    p_status := 'approved'
+    p_status := 'approved',
+	p_transaction_date := '2025-08-20'::timestamptz
 );
 
 -- Update transaction
 SELECT update_financial_transaction(
-    p_transaction_id := 1,
-    p_transaction_date := '2025-08-20'::timestamptz,
+    p_transaction_id := 8,
     p_amount := 2000.00,
+	 p_type := 'debit',
     p_status := 'received'
 );
+select * from financial_transactions;
