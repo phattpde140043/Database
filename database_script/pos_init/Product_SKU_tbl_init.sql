@@ -20,9 +20,10 @@ CREATE INDEX products_price_idx ON products_sku (price);
 CREATE OR REPLACE FUNCTION insert_sku(
     p_sku VARCHAR,
     p_product_id VARCHAR,
+	p_price DECIMAL(10,2),
     p_color VARCHAR DEFAULT NULL,
-    p_size VARCHAR DEFAULT NULL,
-    p_price DECIMAL(10,2)
+    p_size VARCHAR DEFAULT NULL
+    
 )
 RETURNS BIGINT AS $$
 DECLARE
@@ -64,10 +65,10 @@ $$ LANGUAGE plpgsql;
 -- update SKU
 CREATE OR REPLACE FUNCTION update_sku(
     p_sku_id BIGINT,
-    p_sku VARCHAR DEFAULT NULL,
-    p_color VARCHAR DEFAULT NULL,
-    p_size VARCHAR DEFAULT NULL,
-    p_price DECIMAL(10,2) DEFAULT NULL
+    p_sku VARCHAR ,
+    p_color VARCHAR ,
+    p_size VARCHAR ,
+    p_price DECIMAL(10,2)
 )
 RETURNS VOID AS $$
 DECLARE
@@ -95,10 +96,10 @@ BEGIN
     -- Update
     UPDATE products_sku
     SET 
-        sku = COALESCE(p_sku, sku),
-        color = COALESCE(p_color, color),
-        size = COALESCE(p_size, size),
-        price = COALESCE(p_price, price)
+        sku = p_sku,
+        color = p_color,
+        size = p_size,
+        price = p_price
     WHERE sku_id = p_sku_id;
 END;
 $$ LANGUAGE plpgsql;
@@ -124,14 +125,20 @@ $$ LANGUAGE plpgsql;
 -------------------------------------------------------------------------------------------------
 -- get SKU by price range
 CREATE OR REPLACE FUNCTION search_skus_by_price(p_min DECIMAL, p_max DECIMAL)
-RETURNS TABLE(sku_id BIGINT, sku VARCHAR, price DECIMAL(10,2), product_id VARCHAR) AS $$
+RETURNS TABLE(sku_id BIGINT, sku VARCHAR,product_id VARCHAR,color VARCHAR,size VARCHAR, price DECIMAL(10,2),created_at TIMESTAMPTZ) AS $$
 BEGIN
     RETURN QUERY
-    SELECT sku_id, sku, price, product_id
-    FROM products_sku
-    WHERE deleted_at IS NULL
-      AND price BETWEEN p_min AND p_max
-    ORDER BY price ASC;
+    SELECT ps.sku_id, ps.sku,ps.product_id,ps.color,ps.size, ps.price,ps.created_at
+    FROM products_sku ps
+    WHERE ps.deleted_at IS NULL
+      AND ps.price BETWEEN p_min AND p_max
+    ORDER BY ps.price ASC;
 END;
 $$ LANGUAGE plpgsql;
 
+
+Select * from products_sku
+Select insert_sku('SKU_SMART_002','PROD_00001',599.9,'White','256GB')
+Select update_sku(14,'SKU_SMART_003','Gray','256GB',599.9)
+Select soft_delete_sku(15)
+Select search_skus_by_price(17,30)

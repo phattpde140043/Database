@@ -53,7 +53,7 @@ CREATE INDEX employees_hire_date_idx ON employees (hire_date);
 -- ==========================================
 CREATE OR REPLACE FUNCTION insert_employee(
     p_name VARCHAR,
-    p_email BYTEA,
+    p_email VARCHAR,
     p_department_id BIGINT,
     p_salary DECIMAL(12,2),
 	p_hire_date TIMESTAMPTZ DEFAULT now()
@@ -75,7 +75,7 @@ BEGIN
 
     -- Insert
     INSERT INTO employees(name, email, department_id, hire_date, salary)
-    VALUES (p_name, p_email, p_department_id, p_hire_date, p_salary);
+    VALUES (p_name,encrypt_text(p_email), p_department_id, p_hire_date, p_salary);
 END;
 $$ LANGUAGE plpgsql;
 
@@ -86,7 +86,7 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE FUNCTION update_employee(
     p_employee_id VARCHAR,
     p_name VARCHAR DEFAULT NULL,
-    p_email BYTEA DEFAULT NULL,
+    p_email VARCHAR DEFAULT NULL,
     p_department_id BIGINT DEFAULT NULL,
     p_salary DECIMAL(12,2) DEFAULT NULL
 )
@@ -95,7 +95,7 @@ BEGIN
     UPDATE employees
     SET 
         name = p_name,
-        email = p_email,
+        email = encrypt_text(p_email),
         department_id = p_department_id,
         salary = p_salary
     WHERE employee_id = p_employee_id

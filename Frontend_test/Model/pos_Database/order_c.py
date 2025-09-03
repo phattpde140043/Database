@@ -1,6 +1,6 @@
 from datetime import datetime
 from decimal import Decimal
-from common import execute_query, pos_dbname, user, password, host, port
+from Frontend_test.common import execute_query, pos_dbname, user, password, host, port
 
 class Order:
     def __init__(self, order_id, customer, payment_type,

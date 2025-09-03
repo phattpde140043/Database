@@ -37,6 +37,23 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+--------------------------------------------------------------------------------
+-- Hàm tái sử dụng để mã hóa text
+CREATE OR REPLACE FUNCTION encrypt_text(p_text VARCHAR)
+RETURNS BYTEA AS $$
+DECLARE
+    secret_key TEXT := 'my_secret_key';
+    v_encrypted BYTEA;
+BEGIN
+    IF p_text IS NULL THEN
+        RETURN NULL;
+    END IF;
+
+    v_encrypted := pgp_sym_encrypt(p_text, secret_key);
+    RETURN v_encrypted;
+END;
+$$ LANGUAGE plpgsql;
+
 
 -------------------------------------------------------------------------------
 --                              Creating shipping_report_view
