@@ -1,4 +1,4 @@
-from common import execute_query, pos_dbname, user, password, host, port
+from Frontend_test.common import execute_query, pos_dbname, user, password, host, port
 import pandas as pd
 
 class PaymentType:

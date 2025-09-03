@@ -1,4 +1,4 @@
-from common import execute_query, pos_dbname, user, password, host, port
+from Frontend_test.common import execute_query, pos_dbname, user, password, host, port
 
 class OrderItem:
     def __init__(self, order_item_id, order, product, sku, quantity, unit_price):

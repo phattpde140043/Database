@@ -1,6 +1,6 @@
 from datetime import datetime
 import pandas as pd
-from common import execute_query, pos_dbname, user, password, host, port
+from Frontend_test.common import execute_query, erp_dbname, user, password, host, port
 
 
 # ===========================================================
@@ -19,17 +19,33 @@ class Employee:
     @staticmethod
     def getall():
         query = """
-            SELECT employee_id, name, email, department_id, hire_date, salary, deleted_at 
-            FROM employees;
+            SELECT employee_id, name, email, department_id, hire_date, salary
+            FROM employees WHERE deleted_at IS NULL;
         """
-        rows = execute_query(pos_dbname, user, password, host, port, query)
+        rows = execute_query(erp_dbname, user, password, host, port, query)
         return [Employee(*row) for row in rows] if rows else []
 
     @staticmethod
-    def toPandas():
-        employees = Employee.getall()
+    def toPandas(employees):
         data = [vars(e) for e in employees]
         return pd.DataFrame(data)
+    
+    @staticmethod
+    def insert_employee(name,email,department_id,salary,hire_date):
+        query=f"""Select insert_employee('{name}','{email}',{department_id},{salary},{hire_date});"""
+        result = execute_query(erp_dbname, user, password, host, port, query)
+        return result if result else None
+    @staticmethod
+    def update_employee(emp_id,name,email,department_id,salary):
+        query=f"""Select update_employee('{emp_id}','{name}','{email}',{department_id},{salary});"""
+        result = execute_query(erp_dbname, user, password, host, port, query)
+        return result if result else None
+
+    @staticmethod
+    def soft_delete_employee(emp_id):
+        query=f"""Select soft_delete_employee('{emp_id}');"""
+        result = execute_query(erp_dbname, user, password, host, port, query)
+        return result if result else None
 
     def __repr__(self):
         return f"<Employee(id='{self.employee_id}', name='{self.name}', dept={self.department_id})>"

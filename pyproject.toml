@@ -1,0 +1,13 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "Frontend_test"
+version = "0.1"
+description = "Frontend function"
+authors = [{name = "Bạn"}]
+dependencies = []
+
+[tool.setuptools.packages.find]
+include = ["Frontend_test", "Frontend_test.*"]

@@ -1,5 +1,5 @@
 from datetime import datetime
-from common import execute_query, pos_dbname, user, password, host, port
+from Frontend_test.common import execute_query, logistics_dbname, user, password, host, port
 import pandas as pd
 
 
@@ -16,9 +16,8 @@ class Warehouse:
     # =================
     @staticmethod
     def getall():
-        query = """SELECT warehouse_id, name, location, created_at, deleted_at
-                   FROM warehouses;"""
-        rows = execute_query(pos_dbname, user, password, host, port, query)
+        query = """SELECT warehouse_id, name, location, created_at FROM warehouses WHERE deleted_at IS NULL;"""
+        rows = execute_query(logistics_dbname, user, password, host, port, query)
 
         warehouses = []
         if rows:
@@ -34,9 +33,9 @@ class Warehouse:
         return warehouses
 
     @staticmethod
-    def toPandas():
-        warehouses = Warehouse.getall()
+    def toPandas(warehouses):
         data = [
+
             {
                 "warehouse_id": wh.warehouse_id,
                 "name": wh.name,
@@ -50,10 +49,18 @@ class Warehouse:
 
     @staticmethod
     def add_warehouse(name, location):
-        query = f"""
-            INSERT INTO warehouses (name, location)
-            VALUES ('{name}', '{location}')
-            RETURNING warehouse_id;
-        """
-        result = execute_query(pos_dbname, user, password, host, port, query)
+        query = f"""Select insert_warehouse('{name}', '{location}')"""
+        result = execute_query(logistics_dbname, user, password, host, port, query)
+        return result[0][0] if result else None
+    
+    @staticmethod
+    def update_warehouse(id,name,location):
+        query = f"""Select update_warehouse({id},'{name}','{location}')"""
+        result = execute_query(logistics_dbname, user, password, host, port, query)
+        return result[0][0] if result else None
+
+    @staticmethod
+    def soft_delete_warehouse(id):
+        query = f"""Select soft_delete_warehouse({id})"""
+        result = execute_query(logistics_dbname, user, password, host, port, query)
         return result[0][0] if result else None
