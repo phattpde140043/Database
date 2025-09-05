@@ -11,6 +11,31 @@ CREATE TABLE suppliers (
 );
 ------------------------------------------------------------
 CREATE INDEX suppliers_name_idx ON suppliers (name);
+------------------------------------------------------------
+-- Trigger function sử dụng lại encrypt_text
+CREATE OR REPLACE FUNCTION encrypt_supplier_fields()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- Email
+    IF NEW.email IS NOT NULL THEN
+        NEW.email := encrypt_text(NEW.email::text);
+    END IF;
+
+     -- Phone
+    IF NEW.phone IS NOT NULL THEN
+        NEW.phone := encrypt_text(NEW.phone::text);
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+--------------------------------------------------------------------------------
+-- Creating trigger to encrypt email and phone
+CREATE TRIGGER trg_supplier_employees
+BEFORE INSERT OR UPDATE ON suppliers
+FOR EACH ROW
+EXECUTE FUNCTION encrypt_supplier_fields();
+
 
 -- ==========================================
 -- Function: Insert new supplier
@@ -18,8 +43,8 @@ CREATE INDEX suppliers_name_idx ON suppliers (name);
 CREATE OR REPLACE FUNCTION insert_supplier(
     p_name VARCHAR,
     p_contact_name VARCHAR,
-    p_phone BYTEA,
-    p_email BYTEA
+    p_phone VARCHAR,
+    p_email VARCHAR
 )
 RETURNS BIGINT AS $$
 DECLARE
@@ -36,7 +61,7 @@ BEGIN
 
     -- Insert
     INSERT INTO suppliers(name, contact_name, phone, email)
-    VALUES (p_name, p_contact_name, p_phone, p_email)
+    VALUES (p_name, p_contact_name, encrypt_text(p_phone), encrypt_text(p_email))
     RETURNING supplier_id INTO v_supplier_id;
 
     RETURN v_supplier_id;
@@ -50,16 +75,16 @@ CREATE OR REPLACE FUNCTION update_supplier(
     p_supplier_id BIGINT,
     p_name VARCHAR DEFAULT NULL,
     p_contact_name VARCHAR DEFAULT NULL,
-    p_phone BYTEA DEFAULT NULL,
-    p_email BYTEA DEFAULT NULL
+    p_phone VARCHAR DEFAULT NULL,
+    p_email VARCHAR DEFAULT NULL
 )
 RETURNS VOID AS $$
 BEGIN
     UPDATE suppliers
-    SET name = COALESCE(p_name, name),
-        contact_name = COALESCE(p_contact_name, contact_name),
-        phone = COALESCE(p_phone, phone),
-        email = COALESCE(p_email, email)
+    SET name = p_name,
+        contact_name = p_contact_name,
+        phone = encrypt_text(p_phone),
+        email = encrypt_text(p_email)
     WHERE supplier_id = p_supplier_id
       AND deleted_at IS NULL;  -- chỉ update nếu chưa bị xóa mềm
 

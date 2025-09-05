@@ -25,6 +25,25 @@ CREATE TRIGGER employee_id_trigger
     FOR EACH ROW
     EXECUTE FUNCTION generate_employee_id();
 
+---------------------------------------------------------------------------
+-- Trigger function sử dụng lại encrypt_text
+CREATE OR REPLACE FUNCTION encrypt_employee_fields()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- Email
+    IF NEW.email IS NOT NULL THEN
+        NEW.email := encrypt_text(NEW.email::text);
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+--------------------------------------------------------------------------------
+-- Creating trigger to encrypt email and phone
+CREATE TRIGGER trg_encrypt_employees
+BEFORE INSERT OR UPDATE ON employees
+FOR EACH ROW
+EXECUTE FUNCTION encrypt_employee_fields();
 ----------------------------------------------------------------------------
 CREATE INDEX employees_hire_date_idx ON employees (hire_date);
 
@@ -33,12 +52,11 @@ CREATE INDEX employees_hire_date_idx ON employees (hire_date);
 -- Function: Insert new employee
 -- ==========================================
 CREATE OR REPLACE FUNCTION insert_employee(
-    p_employee_id VARCHAR,
     p_name VARCHAR,
-    p_email BYTEA,
+    p_email VARCHAR,
     p_department_id BIGINT,
-    p_hire_date TIMESTAMPTZ DEFAULT now(),
-    p_salary DECIMAL(12,2)
+    p_salary DECIMAL(12,2),
+	p_hire_date TIMESTAMPTZ DEFAULT now()
 )
 RETURNS VOID AS $$
 BEGIN
@@ -56,8 +74,8 @@ BEGIN
     END IF;
 
     -- Insert
-    INSERT INTO employees(employee_id, name, email, department_id, hire_date, salary)
-    VALUES (p_employee_id, p_name, p_email, p_department_id, p_hire_date, p_salary);
+    INSERT INTO employees(name, email, department_id, hire_date, salary)
+    VALUES (p_name,encrypt_text(p_email), p_department_id, p_hire_date, p_salary);
 END;
 $$ LANGUAGE plpgsql;
 
@@ -68,7 +86,7 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE FUNCTION update_employee(
     p_employee_id VARCHAR,
     p_name VARCHAR DEFAULT NULL,
-    p_email BYTEA DEFAULT NULL,
+    p_email VARCHAR DEFAULT NULL,
     p_department_id BIGINT DEFAULT NULL,
     p_salary DECIMAL(12,2) DEFAULT NULL
 )
@@ -76,10 +94,10 @@ RETURNS VOID AS $$
 BEGIN
     UPDATE employees
     SET 
-        name = COALESCE(p_name, name),
-        email = COALESCE(p_email, email),
-        department_id = COALESCE(p_department_id, department_id),
-        salary = COALESCE(p_salary, salary)
+        name = p_name,
+        email = encrypt_text(p_email),
+        department_id = p_department_id,
+        salary = p_salary
     WHERE employee_id = p_employee_id
       AND deleted_at IS NULL;
 
@@ -111,10 +129,12 @@ $$ LANGUAGE plpgsql;
 
 
 -- Insert
-SELECT insert_employee('E001', 'Nguyen Van A', 'a@example.com'::BYTEA, 1, now(), 1200.00);
+SELECT insert_employee('Nguyen Van A', 'a@example.com', 1,  1200.00,now());
 
 -- Update
-SELECT update_employee('E001', p_salary := 1500.00);
+SELECT update_employee('EMP_0009','Nguyen Van A','abc@yahoo.com',2, p_salary := 1500.00);
 
 -- Soft delete
-SELECT soft_delete_employee('E001');
+SELECT soft_delete_employee('EMP_0009');
+
+Select * from employees

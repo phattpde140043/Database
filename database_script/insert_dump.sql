@@ -13,7 +13,7 @@ INSERT INTO products (name, category_id) VALUES
 ('Football', 5);
 
 
-INSERT INTO products_sku (sku, product_id, color, size, price) VALUES
+INSERT INTO products_sku (sku, product_id, color, size, price) VALUESs
 ('SKU_SMART_001', 'PROD_00001', 'Black', '128GB', 499.99),
 ('SKU_TSHIRT_001', 'PROD_00002', 'Red', 'M', 19.99),
 ('SKU_OVEN_001', 'PROD_00003', 'Silver', '20L', 150.00),
@@ -91,24 +91,24 @@ INSERT INTO departments (name) VALUES
 -- 3. employees
 -- (email lưu dạng bytea -> encode text)
 -- ==========================================
-INSERT INTO employees (employee_id, name, email, department_id, hire_date, salary)
+INSERT INTO employees ( name, email, department_id, hire_date, salary)
 VALUES
-('E001', 'Alice', encode('alice@example.com','escape')::bytea, 1, now() - interval '500 days', 1200.00),
-('E002', 'Bob',   encode('bob@example.com','escape')::bytea, 2, now() - interval '400 days', 1500.00),
-('E003', 'Carol', encode('carol@example.com','escape')::bytea, 3, now() - interval '300 days', 1300.00),
-('E004', 'David', encode('david@example.com','escape')::bytea, 4, now() - interval '200 days', 2000.00),
-('E005', 'Eva',   encode('eva@example.com','escape')::bytea, 5, now() - interval '100 days', 1700.00);
+( 'Alice', 'alice@example.com', 1, now() - interval '500 days', 1200.00),
+( 'Bob',   'bob@example.com', 2, now() - interval '400 days', 1500.00),
+( 'Carol', 'carol@example.com', 3, now() - interval '300 days', 1300.00),
+( 'David', 'david@example.com', 4, now() - interval '200 days', 2000.00),
+( 'Eva',   'eva@example.com', 5, now() - interval '100 days', 1700.00);
 
 -- ==========================================
 -- 4. suppliers
 -- ==========================================
 INSERT INTO suppliers (name, contact_name, phone, email, created_at)
 VALUES
-('Supplier A', 'John Doe', encode('0123456789','escape')::bytea, encode('a@supplier.com','escape')::bytea, now() - interval '50 days'),
-('Supplier B', 'Jane Doe', encode('0987654321','escape')::bytea, encode('b@supplier.com','escape')::bytea, now() - interval '40 days'),
-('Supplier C', 'Mike Ross',encode('0222333444','escape')::bytea, encode('c@supplier.com','escape')::bytea, now() - interval '30 days'),
-('Supplier D', 'Rachel Z', encode('0333444555','escape')::bytea, encode('d@supplier.com','escape')::bytea, now() - interval '20 days'),
-('Supplier E', 'Harvey S', encode('0444555666','escape')::bytea, encode('e@supplier.com','escape')::bytea, now() - interval '10 days');
+('Supplier A', 'John Doe', '0123456789', 'a@supplier.com', now() - interval '50 days'),
+('Supplier B', 'Jane Doe', '0987654321', 'b@supplier.com', now() - interval '40 days'),
+('Supplier C', 'Mike Ross','0222333444', 'c@supplier.com', now() - interval '30 days'),
+('Supplier D', 'Rachel Z', '0333444555', 'd@supplier.com', now() - interval '20 days'),
+('Supplier E', 'Harvey S', '0444555666', 'e@supplier.com', now() - interval '10 days');
 
 -- ==========================================
 -- 5. purchase_orders (partition theo order_date)
@@ -116,40 +116,40 @@ VALUES
 INSERT INTO purchase_orders (supplier_id, order_date, status, total_amount) VALUES
 (1, '2025-08-05', 'draft', 1000.00),
 (2, '2025-08-10', 'approved', 2500.00),
-(3, '2025-09-12', 'received', 500.00),
-(4, '2025-09-20', 'cancelled', 0.00),
-(5, '2025-10-01', 'approved', 3000.00);
+(3, '2025-09-01', 'received', 500.00),
+(4, '2025-09-01', 'cancelled', 0.00),
+(5, '2025-08-01', 'approved', 3000.00);
 
 -- ==========================================
 -- 6. purchase_order_items (partition theo order_date)
 -- ==========================================
 INSERT INTO purchase_order_items (po_id, product_id, quantity, unit_price, order_date) VALUES
-(1, 'P001', 10, 100.00, '2025-08-05'),
-(2, 'P002', 5, 500.00, '2025-08-10'),
-(3, 'P003', 20, 25.00, '2025-09-12'),
-(4, 'P004', 15, 10.00, '2025-09-20'),
-(5, 'P005', 30, 100.00, '2025-10-01');
+(4, 'PROD_00001', 10, 100.00, '2025-08-05'),
+(5, 'PROD_00002', 5, 500.00, '2025-08-10'),
+(6, 'PROD_00003', 20, 25.00, '2025-09-01'),
+(7, 'PROD_00004', 15, 10.00, '2025-09-01'),
+(8, 'PROD_00005', 30, 100.00, '2025-08-01');
 
 -- ==========================================
 -- 7. shipments (partition theo shipment_date)
 -- giả sử đã có warehouses (id 1-2)
 -- ==========================================
 INSERT INTO shipments (order_id, warehouse_id, shipment_date, status) VALUES
-(101, 1, '2025-08-02', 'pending'),
-(102, 1, '2025-08-05', 'in_transit'),
-(103, 2, '2025-09-01', 'delivered'),
-(104, 2, '2025-09-10', 'cancelled'),
-(105, 1, '2025-10-15', 'in_transit');
+(6, 1, '2025-08-30', 'pending'),
+(7, 2, '2025-08-30', 'in_transit'),
+(8, 3, '2025-08-30', 'delivered'),
+(9, 4, '2025-08-30', 'cancelled'),
+(10, 5, '2025-08-30', 'in_transit');
 
 -- ==========================================
 -- 8. delivery_tracking (partition theo checkpoint_time)
 -- ==========================================
 INSERT INTO delivery_tracking (shipment_id, shipment_date, checkpoint_time, location, status) VALUES
-(1, '2025-08-02', '2025-08-03 08:00', 'Hanoi', 'in_transit'),
-(1, '2025-08-02', '2025-08-04 10:00', 'Hai Phong', 'in_transit'),
-(2, '2025-08-05', '2025-08-06 12:00', 'Da Nang', 'delivered'),
-(3, '2025-09-01', '2025-09-02 09:00', 'Ho Chi Minh', 'in_transit'),
-(5, '2025-10-15', '2025-10-16 11:00', 'Can Tho', 'in_transit');
+(1, '2025-08-30', '2025-09-01 08:00', 'Hanoi', 'in_transit'),
+(1, '2025-08-30', '2025-09-01 10:00', 'Hai Phong', 'in_transit'),
+(2, '2025-08-30', '2025-09-01 12:00', 'Da Nang', 'delivered'),
+(3, '2025-08-30', '2025-09-01 09:00', 'Ho Chi Minh', 'in_transit'),
+(5, '2025-08-30', '2025-09-01 11:00', 'Can Tho', 'in_transit');
 
 -- ==========================================
 -- 9. financial_transactions (partition theo transaction_date)
@@ -157,9 +157,9 @@ INSERT INTO delivery_tracking (shipment_id, shipment_date, checkpoint_time, loca
 INSERT INTO financial_transactions (transaction_date, account_id, amount, type, status) VALUES
 ('2025-08-01', 1, 500.00, 'debit', 'approved'),
 ('2025-08-05', 2, 1200.00, 'credit', 'received'),
-('2025-09-10', 3, 300.00, 'debit', 'draft'),
-('2025-09-20', 4, 1000.00, 'credit', 'approved'),
-('2025-10-05', 5, 2000.00, 'debit', 'cancelled');
+('2025-08-10', 3, 300.00, 'debit', 'draft'),
+('2025-08-20', 4, 1000.00, 'credit', 'approved'),
+('2025-09-01', 5, 2000.00, 'debit', 'cancelled');
 
 select * from accounts
 
@@ -196,24 +196,7 @@ VALUES
 -- Nếu bạn đã có bảng products và categories, chỉnh category_id cho phù hợp.
 -- Sử dụng product_id tĩnh 'P001'..'P005' để dễ tham chiếu.
 -- ------------------------------------------------------------
-INSERT INTO products (product_id, name, category_id, created_at)
-VALUES
-  ('P001', 'Product 1', 1, now() - interval '40 days'),
-  ('P002', 'Product 2', 1, now() - interval '35 days'),
-  ('P003', 'Product 3', 2, now() - interval '30 days'),
-  ('P004', 'Product 4', 2, now() - interval '20 days'),
-  ('P005', 'Product 5', 3, now() - interval '10 days');
 
--- ------------------------------------------------------------
--- (TÙY CHỌN) Insert mẫu: products_sku (5 rows) — 1 SKU / product
--- ------------------------------------------------------------
-INSERT INTO products_sku (sku, product_id, color, size, price)
-VALUES
-  ('SKU_P001', 'P001', 'Red',    'M', 100.00),
-  ('SKU_P002', 'P002', 'Blue',   'L', 150.00),
-  ('SKU_P003', 'P003', 'Black',  'S',  75.50),
-  ('SKU_P004', 'P004', 'White',  'XL', 20.00),
-  ('SKU_P005', 'P005', 'Green',  'M', 250.00);
 
 -- ------------------------------------------------------------
 -- Insert mẫu: Inventory (5 rows) — tham chiếu đến warehouses & skus
@@ -221,36 +204,14 @@ VALUES
 -- ------------------------------------------------------------
 INSERT INTO inventory (warehouse_id, product_id, sku_id, stock_quantity)
 VALUES
-  (
-    (SELECT warehouse_id FROM warehouses WHERE name = 'Warehouse A' LIMIT 1),
-    'P001',
-    (SELECT sku_id FROM products_sku WHERE sku = 'SKU_P001' LIMIT 1),
-    120
-  ),
-  (
-    (SELECT warehouse_id FROM warehouses WHERE name = 'Warehouse B' LIMIT 1),
-    'P002',
-    (SELECT sku_id FROM products_sku WHERE sku = 'SKU_P002' LIMIT 1),
-    50
-  ),
-  (
-    (SELECT warehouse_id FROM warehouses WHERE name = 'Warehouse C' LIMIT 1),
-    'P003',
-    (SELECT sku_id FROM products_sku WHERE sku = 'SKU_P003' LIMIT 1),
-    200
-  ),
-  (
-    (SELECT warehouse_id FROM warehouses WHERE name = 'Warehouse D' LIMIT 1),
-    'P004',
-    (SELECT sku_id FROM products_sku WHERE sku = 'SKU_P004' LIMIT 1),
-    15
-  ),
-  (
-    (SELECT warehouse_id FROM warehouses WHERE name = 'Warehouse E' LIMIT 1),
-    'P005',
-    (SELECT sku_id FROM products_sku WHERE sku = 'SKU_P005' LIMIT 1),
-    75
-  );
+  (1,'PROD_00002',7,200),
+  (2,'PROD_00001',6,500),
+  (5,'PROD_00004',9,458),
+  (3,'PROD_00001',6,96),
+  (4,'PROD_00005',10,157),
+  (2,'PROD_00003',8,211),
+  (1,'PROD_00001',6,186),
+  (4,'PROD_00002',7,198);
 
 COMMIT;
 

@@ -4,6 +4,9 @@ CREATE DATABASE erp_database;
 -- Connecting to the database
 \connect erp_database;
 
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+
 -- Function tạo partition theo tháng cho bảng orders
 CREATE OR REPLACE FUNCTION create_monthly_partition(parent_table TEXT, year INT, month INT)
 RETURNS void AS $$
@@ -34,6 +37,23 @@ BEGIN
     EXECUTE sql;
     RAISE NOTICE 'Created partition % for period % - %',
         partition_name, start_date, end_date;
+END;
+$$ LANGUAGE plpgsql;
+
+--------------------------------------------------------------------------------
+-- Hàm tái sử dụng để mã hóa text
+CREATE OR REPLACE FUNCTION encrypt_text(p_text VARCHAR)
+RETURNS BYTEA AS $$
+DECLARE
+    secret_key TEXT := 'my_secret_key';
+    v_encrypted BYTEA;
+BEGIN
+    IF p_text IS NULL THEN
+        RETURN NULL;
+    END IF;
+
+    v_encrypted := pgp_sym_encrypt(p_text, secret_key);
+    RETURN v_encrypted;
 END;
 $$ LANGUAGE plpgsql;
 

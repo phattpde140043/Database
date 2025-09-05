@@ -54,8 +54,8 @@ BEGIN
 
     -- Update dữ liệu
     UPDATE warehouses
-    SET name = COALESCE(p_name, name),
-        location = COALESCE(p_location, location)
+    SET name = p_name,
+        location = p_location
     WHERE warehouse_id = p_warehouse_id;
 END;
 $$ LANGUAGE plpgsql;
@@ -84,8 +84,11 @@ $$ LANGUAGE plpgsql;
 SELECT insert_warehouse('Kho Hà Nội', 'Hà Nội, Việt Nam');
 
 -- Update
-SELECT update_warehouse(1, 'Kho HN Mới', NULL);
+SELECT update_warehouse(1, 'Kho HN Mới', 'Hà Nam, Việt Nam');
 
 -- Soft Delete
 SELECT soft_delete_warehouse(1);
+
+SELECT warehouse_id, name, location, created_at, deleted_at
+                   FROM warehouses;
 
