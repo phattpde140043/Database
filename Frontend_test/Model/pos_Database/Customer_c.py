@@ -63,8 +63,8 @@ class Customer:
             {
                 "customer_id": c.customer_id,
                 "name": c.name,
-                #"email": c.email,
-                #"phone": c.phone,
+                "email": c.email,
+                "phone": c.phone,
                 "address": c.address,
                 "created_at": c.created_at
             }

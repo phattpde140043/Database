@@ -6,16 +6,20 @@ CREATE DATABASE pos_database;
 \connect pos_database;
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
-
+ALTER SYSTEM SET custom.key_constant TO 'my_secret_key';
+SELECT pg_reload_conf();
 
 --------------------------------------------------------------------------------
 -- Hàm tái sử dụng để mã hóa text
 CREATE OR REPLACE FUNCTION encrypt_text(p_text VARCHAR)
 RETURNS BYTEA AS $$
 DECLARE
-    secret_key TEXT := 'my_secret_key';
+    secret_key TEXT;
     v_encrypted BYTEA;
 BEGIN
+    -- Lấy khóa bí mật từ cấu hình hệ thống
+    secret_key := current_setting('custom.key_constant');
+
     IF p_text IS NULL THEN
         RETURN NULL;
     END IF;
@@ -61,6 +65,64 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+--------------------------------------------------------------------------
+-- function change key
+CREATE OR REPLACE FUNCTION decrypt_customers(old_key TEXT)
+RETURNS TABLE (
+    customer_id VARCHAR(20),
+    email TEXT,
+    phone TEXT
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        c.customer_id,
+        convert_from(pgp_sym_decrypt(c.email::BYTEA, old_key)::BYTEA, 'UTF8') AS email,
+        convert_from(pgp_sym_decrypt(c.phone::BYTEA, old_key)::BYTEA, 'UTF8') AS phone
+    FROM customers c;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION reencrypt_customers(new_key TEXT)
+RETURNS void AS $$
+DECLARE
+    old_key TEXT;
+    decrypted_data RECORD;
+BEGIN
+    SELECT current_setting('custom.key_constant') INTO old_key;
+
+    FOR decrypted_data IN SELECT * FROM decrypt_customers(old_key)
+    LOOP
+        BEGIN
+            UPDATE customers
+            SET 
+                email = pgp_sym_encrypt(decrypted_data.email, new_key),
+                phone = pgp_sym_encrypt(decrypted_data.phone, new_key)
+            WHERE customer_id = decrypted_data.customer_id;
+
+        EXCEPTION WHEN OTHERS THEN
+            RAISE NOTICE '❌ Lỗi mã hóa lại dòng %: %', decrypted_data.customer_id, SQLERRM;
+            CONTINUE;
+        END;
+    END LOOP;
+END;
+$$ LANGUAGE plpgsql;
+
+
+
+select decrypt_customers('my_secret_key')
+BEGIN;
+Select reencrypt_customers('tranphuphat')
+COMMIT;
+SHOW custom.key_constant;
+
+SELECT 
+    customer_id, 
+    name, 
+    pgp_sym_decrypt(email::bytea, 'tranphuphat') AS email, 
+    pgp_sym_decrypt(phone::bytea, 'tranphuphat') AS phone
+FROM 
+    customers 
 --------------------------------------------------------------------------------
 -- Creating product_view
 CREATE VIEW product_view AS
