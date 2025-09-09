@@ -123,3 +123,4 @@ SELECT update_supplier(1, p_name := 'ABC International');
 
 -- Soft delete supplier
 SELECT soft_delete_supplier(1);
+SELECT * from suppliers

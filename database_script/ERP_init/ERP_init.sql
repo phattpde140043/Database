@@ -57,6 +57,78 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+--------------------------------------------------------------------------
+-- function change key
+CREATE OR REPLACE FUNCTION decrypt_data_employee(old_key TEXT)
+RETURNS TABLE (
+    employee_id VARCHAR(20),
+    email TEXT
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        c.employee_id,
+        convert_from(pgp_sym_decrypt(c.email::BYTEA, old_key)::BYTEA, 'UTF8') AS email
+    FROM employees c;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION decrypt_data_suppliers(old_key TEXT)
+RETURNS TABLE (
+    supplier_id BIGINT,
+    email TEXT,
+    phone TEXT
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        c.supplier_id,
+        convert_from(pgp_sym_decrypt(c.email::BYTEA, old_key)::BYTEA, 'UTF8') AS email,
+        convert_from(pgp_sym_decrypt(c.phone::BYTEA, old_key)::BYTEA, 'UTF8') AS phone
+    FROM suppliers c;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION reencrypt_data(new_key TEXT)
+RETURNS void AS $$
+DECLARE
+    old_key TEXT;
+    decrypted_data RECORD;
+BEGIN
+    SELECT current_setting('custom.key_constant') INTO old_key;
+
+    FOR decrypted_data IN SELECT * FROM decrypt_data_employee(old_key)
+    LOOP
+        BEGIN
+            UPDATE employees
+            SET 
+                email = pgp_sym_encrypt(decrypted_data.email, new_key)
+            WHERE employee_id = decrypted_data.employee_id;
+
+        EXCEPTION WHEN OTHERS THEN
+            RAISE NOTICE '❌ Lỗi mã hóa lại dòng %: %', decrypted_data.employee_id, SQLERRM;
+            CONTINUE;
+        END;
+    END LOOP;
+
+	FOR decrypted_data IN SELECT * FROM decrypt_data_suppliers(old_key)
+    LOOP
+        BEGIN
+            UPDATE suppliers
+            SET 
+                email = pgp_sym_encrypt(decrypted_data.email, new_key),
+                phone = pgp_sym_encrypt(decrypted_data.phone, new_key)
+            WHERE supplier_id = decrypted_data.supplier_id;
+
+        EXCEPTION WHEN OTHERS THEN
+            RAISE NOTICE '❌ Lỗi mã hóa lại dòng %: %', decrypted_data.supplier_id, SQLERRM;
+            CONTINUE;
+        END;
+    END LOOP;
+END;
+$$ LANGUAGE plpgsql;
+
+
 ------------------------------------------------------------------------------------------------------
 CREATE TABLE audit_log (
     log_id BIGSERIAL PRIMARY KEY,
@@ -136,3 +208,5 @@ CREATE TRIGGER financial_transactions_audit
 AFTER INSERT OR UPDATE OR DELETE ON financial_transactions
 FOR EACH ROW EXECUTE FUNCTION audit_dml_trigger();
 ------------------------------------------------------------------------------------------------------
+
+Select * from audit_log
