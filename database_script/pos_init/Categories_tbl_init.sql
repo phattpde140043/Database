@@ -4,7 +4,8 @@ CREATE TABLE categories (
     category_id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
     name VARCHAR(255) NOT NULL CHECK (LENGTH(name) > 0),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now() CHECK (created_at <= now()),
-    deleted_at TIMESTAMPTZ CHECK (deleted_at IS NULL OR deleted_at > created_at)
+    deleted_at TIMESTAMPTZ CHECK (deleted_at IS NULL OR deleted_at > created_at),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now() CHECK (updated_at <= CURRENT_TIMESTAMP)
 );
 
 ----------------------------------------------------------------------------------
@@ -104,3 +105,21 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+
+-- ==========================================
+-- Trigger: update column updated_at
+-- ==========================================
+CREATE OR REPLACE FUNCTION categories_set_timestamp()
+RETURNS TRIGGER AS $$
+BEGIN
+   NEW.updated_at = NOW();
+   RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS categories_set_timestamp_trigger ON categories;
+
+CREATE TRIGGER categories_set_timestamp_trigger
+BEFORE INSERT OR UPDATE ON categories
+FOR EACH ROW
+EXECUTE FUNCTION categories_set_timestamp();

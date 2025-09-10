@@ -7,7 +7,8 @@ CREATE TABLE suppliers (
     phone BYTEA NOT NULL ,
     email BYTEA NOT NULL ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now() CHECK (created_at <= CURRENT_TIMESTAMP),
-    deleted_at TIMESTAMPTZ CHECK (deleted_at IS NULL OR deleted_at > created_at)
+    deleted_at TIMESTAMPTZ CHECK (deleted_at IS NULL OR deleted_at > created_at),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now() CHECK (updated_at <= CURRENT_TIMESTAMP)
 );
 ------------------------------------------------------------
 CREATE INDEX suppliers_name_idx ON suppliers (name);
@@ -114,6 +115,25 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- ==========================================
+-- Trigger: update column updated_at
+-- ==========================================
+CREATE OR REPLACE FUNCTION supplier_set_timestamp()
+RETURNS TRIGGER AS $$
+BEGIN
+   NEW.updated_at = NOW();
+   RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS supplier_set_timestamp_trigger ON suppliers;
+
+CREATE TRIGGER supplier_set_timestamp_trigger
+BEFORE INSERT OR UPDATE ON suppliers
+FOR EACH ROW
+EXECUTE FUNCTION supplier_set_timestamp();
+
+---------------------------------    Test --------------------------
 
 -- Insert supplier mới
 SELECT insert_supplier('ABC Co', 'John Doe', '0123456789'::bytea, 'john@abc.com'::bytea);

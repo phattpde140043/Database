@@ -7,6 +7,7 @@ CREATE TABLE financial_transactions (
     amount DECIMAL(12,2) NOT NULL CHECK (amount > 0),
     type VARCHAR(20) NOT NULL CHECK( type IN ('debit', 'credit')),
     status VARCHAR(20) NOT NULL CHECK (status IN ('draft', 'approved', 'received', 'cancelled')),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now() CHECK (updated_at <= CURRENT_TIMESTAMP),
     PRIMARY KEY (transaction_id, transaction_date)
 ) PARTITION BY RANGE (transaction_date);
 
@@ -78,6 +79,25 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- ==========================================
+-- Trigger: update column updated_at
+-- ==========================================
+CREATE OR REPLACE FUNCTION financial_transaction_set_timestamp()
+RETURNS TRIGGER AS $$
+BEGIN
+   NEW.updated_at = NOW();
+   RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS financial_transaction_set_timestamp_trigger ON financial_transactions;
+
+CREATE TRIGGER financial_transaction_set_timestamp_trigger
+BEFORE INSERT OR UPDATE ON financial_transactions
+FOR EACH ROW
+EXECUTE FUNCTION financial_transaction_set_timestamp();
+
+-------------------------------  Test ----------------------------------
 
 -- Insert transaction
 SELECT insert_financial_transaction(

@@ -6,6 +6,7 @@ CREATE TABLE shipments (
     warehouse_id BIGINT NOT NULL REFERENCES warehouses(warehouse_id),
     shipment_date TIMESTAMPTZ NOT NULL DEFAULT now() CHECK (shipment_date <= CURRENT_TIMESTAMP),
     status VARCHAR(20) NOT NULL CHECK (status IN ('pending', 'in_transit', 'delivered', 'cancelled')) DEFAULT 'pending',
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now() CHECK (updated_at <= CURRENT_TIMESTAMP)
 	PRIMARY KEY (shipment_id,shipment_date)
 ) PARTITION BY RANGE (shipment_date);
 
@@ -51,6 +52,25 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- ==========================================
+-- Trigger: update column updated_at
+-- ==========================================
+CREATE OR REPLACE FUNCTION shipment_set_timestamp()
+RETURNS TRIGGER AS $$
+BEGIN
+   NEW.updated_at = NOW();
+   RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS shipment_set_timestamp_trigger ON shipments;
+
+CREATE TRIGGER shipment_set_timestamp_trigger
+BEFORE INSERT OR UPDATE ON shipments
+FOR EACH ROW
+EXECUTE FUNCTION shipment_set_timestamp();
+
+--------------------------------  Test ----------------------------
 Select * from shipments;
 -- Insert shipment mới (tự động vào partition 2025-09)
 SELECT insert_shipment(

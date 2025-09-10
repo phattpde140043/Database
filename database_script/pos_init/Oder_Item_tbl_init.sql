@@ -9,6 +9,7 @@ CREATE TABLE order_items (
     quantity INT NOT NULL CHECK (quantity > 0),
     unit_price DECIMAL(10,2) NOT NULL CHECK (unit_price > 0),
     order_date TIMESTAMPTZ NOT NULL ,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now() CHECK (updated_at <= CURRENT_TIMESTAMP)
 	PRIMARY KEY (order_id, order_item_id, order_date),
 	FOREIGN KEY (order_id, order_date) REFERENCES orders(order_id, order_date)
 ) PARTITION BY RANGE (order_date);
@@ -21,3 +22,21 @@ SELECT create_monthly_partition('order_items', 2025, 10); -- Tạo partition cho
 --------------------------------------------------------------------------------
 -- Creating indexes
 CREATE INDEX order_items_order_id_idx ON order_items USING hash (order_id);
+
+-- ==========================================
+-- Trigger: update column updated_at
+-- ==========================================
+CREATE OR REPLACE FUNCTION order_items_set_timestamp()
+RETURNS TRIGGER AS $$
+BEGIN
+   NEW.updated_at = NOW();
+   RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS order_items_set_timestamp_trigger ON order_items;
+
+CREATE TRIGGER order_items_set_timestamp_trigger
+BEFORE INSERT OR UPDATE ON order_items
+FOR EACH ROW
+EXECUTE FUNCTION order_items_set_timestamp();

@@ -6,6 +6,7 @@ CREATE TABLE purchase_orders (
     order_date TIMESTAMPTZ DEFAULT now() CHECK (order_date <= CURRENT_TIMESTAMP),
     status VARCHAR(20) NOT NULL CHECK (status IN ('draft', 'approved', 'received', 'cancelled')),
     total_amount DECIMAL(12,2) NOT NULL CHECK (total_amount >= 0),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now() CHECK (updated_at <= CURRENT_TIMESTAMP)
     PRIMARY KEY (po_id, order_date)
 ) PARTITION BY RANGE (order_date);
 
@@ -69,3 +70,21 @@ BEGIN
     END IF;
 END;
 $$ LANGUAGE plpgsql;
+
+-- ==========================================
+-- Trigger: update column updated_at
+-- ==========================================
+CREATE OR REPLACE FUNCTION purchase_order_set_timestamp()
+RETURNS TRIGGER AS $$
+BEGIN
+   NEW.updated_at = NOW();
+   RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS purchase_order_set_timestamp_trigger ON purchase_orders;
+
+CREATE TRIGGER purchase_order_set_timestamp_trigger
+BEFORE INSERT OR UPDATE ON purchase_orders
+FOR EACH ROW
+EXECUTE FUNCTION purchase_order_set_timestamp();

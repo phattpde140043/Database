@@ -7,7 +7,8 @@ CREATE TABLE employees (
     department_id BIGINT NOT NULL REFERENCES departments(department_id),
     hire_date TIMESTAMPTZ NOT NULL DEFAULT now() CHECK (hire_date <= CURRENT_TIMESTAMP),
     salary DECIMAL(12,2) NOT NULL CHECK (salary > 0),
-    deleted_at TIMESTAMPTZ CHECK (deleted_at IS NULL OR deleted_at > hire_date)
+    deleted_at TIMESTAMPTZ CHECK (deleted_at IS NULL OR deleted_at > hire_date),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now() CHECK (updated_at <= CURRENT_TIMESTAMP)
 );
 
 ----------------------------------------------------------------------------
@@ -128,6 +129,25 @@ END;
 $$ LANGUAGE plpgsql;
 
 
+-- ==========================================
+-- Trigger: update column updated_at
+-- ==========================================
+CREATE OR REPLACE FUNCTION employee_set_timestamp()
+RETURNS TRIGGER AS $$
+BEGIN
+   NEW.updated_at = NOW();
+   RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS account_set_timestamp_trigger ON employees;
+
+CREATE TRIGGER employee_set_timestamp_trigger
+BEFORE INSERT OR UPDATE ON employees
+FOR EACH ROW
+EXECUTE FUNCTION employee_set_timestamp();
+
+----------------------------- Test -----------------------------------------
 -- Insert
 SELECT insert_employee('Nguyen Van A', 'a@example.com', 1,  1200.00,now());
 
@@ -137,4 +157,4 @@ SELECT update_employee('EMP_0009','Nguyen Van A','abc@yahoo.com',2, p_salary := 
 -- Soft delete
 SELECT soft_delete_employee('EMP_0009');
 
-Select * from employees
+Select * from employees;

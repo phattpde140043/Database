@@ -7,6 +7,7 @@ CREATE TABLE delivery_tracking (
     checkpoint_time TIMESTAMPTZ NOT NULL CHECK (checkpoint_time <= CURRENT_TIMESTAMP),
     location VARCHAR(500) NOT NULL,
     status VARCHAR(20) NOT NULL CHECK (status IN ('in_transit', 'delivered', 'cancelled')) DEFAULT 'in_transit',
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now() CHECK (updated_at <= CURRENT_TIMESTAMP)
 	PRIMARY KEY (tracking_id,checkpoint_time),
 	FOREIGN KEY (shipment_id,shipment_date) REFERENCES shipments(shipment_id,shipment_date)
 ) PARTITION BY RANGE (checkpoint_time);
@@ -82,6 +83,27 @@ BEGIN
     RETURN v_tracking_id;
 END;
 $$ LANGUAGE plpgsql;
+
+
+-- ==========================================
+-- Trigger: update column updated_at
+-- ==========================================
+CREATE OR REPLACE FUNCTION delivery_tracking_set_timestamp()
+RETURNS TRIGGER AS $$
+BEGIN
+   NEW.updated_at = NOW();
+   RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS delivery_tracking_set_timestamp_trigger ON delivery_tracking;
+
+CREATE TRIGGER delivery_tracking_set_timestamp_trigger
+BEFORE INSERT OR UPDATE ON delivery_tracking
+FOR EACH ROW
+EXECUTE FUNCTION delivery_tracking_set_timestamp();
+
+----------------------------------    Test ------------------------------
 
 select * from delivery_tracking;
 

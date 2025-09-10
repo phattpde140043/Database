@@ -2,7 +2,8 @@
 --                              Creating payment_types table
 CREATE TABLE payment_types (
     payment_type_id INT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-    name VARCHAR(255) NOT NULL CHECK (LENGTH(name) > 0)
+    name VARCHAR(255) NOT NULL CHECK (LENGTH(name) > 0),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now() CHECK (updated_at <= CURRENT_TIMESTAMP)
 );
 
 -- function update payment_types
@@ -51,3 +52,21 @@ BEGIN
     RETURN v_payment_type_id;
 END;
 $$ LANGUAGE plpgsql;
+
+-- ==========================================
+-- Trigger: update column updated_at
+-- ==========================================
+CREATE OR REPLACE FUNCTION payment_type_set_timestamp()
+RETURNS TRIGGER AS $$
+BEGIN
+   NEW.updated_at = NOW();
+   RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS payment_type_set_timestamp_trigger ON payment_types;
+
+CREATE TRIGGER payment_type_set_timestamp_trigger
+BEFORE INSERT OR UPDATE ON payment_types
+FOR EACH ROW
+EXECUTE FUNCTION payment_type_set_timestamp();

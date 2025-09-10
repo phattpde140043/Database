@@ -5,7 +5,8 @@ CREATE TABLE warehouses (
     name VARCHAR(255) NOT NULL CHECK (LENGTH(name) > 0),
     location VARCHAR(500) NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now() CHECK (created_at <= CURRENT_TIMESTAMP),
-    deleted_at TIMESTAMPTZ CHECK (deleted_at IS NULL OR deleted_at > created_at)
+    deleted_at TIMESTAMPTZ CHECK (deleted_at IS NULL OR deleted_at > created_at),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now() CHECK (updated_at <= CURRENT_TIMESTAMP)
 );
 
 -- ===========================
@@ -79,6 +80,25 @@ BEGIN
     WHERE warehouse_id = p_warehouse_id;
 END;
 $$ LANGUAGE plpgsql;
+
+-- ==========================================
+-- Trigger: update column updated_at
+-- ==========================================
+CREATE OR REPLACE FUNCTION warehouse_set_timestamp()
+RETURNS TRIGGER AS $$
+BEGIN
+   NEW.updated_at = NOW();
+   RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS warehouse_set_timestamp_trigger ON warehouses;
+
+CREATE TRIGGER warehouse_set_timestamp_trigger
+BEFORE INSERT OR UPDATE ON warehouses
+FOR EACH ROW
+EXECUTE FUNCTION warehouse_set_timestamp();
+---------------------------------_Test -----------------------------
 
 -- Insert
 SELECT insert_warehouse('Kho Hà Nội', 'Hà Nội, Việt Nam');
