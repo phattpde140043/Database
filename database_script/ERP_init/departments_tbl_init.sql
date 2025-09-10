@@ -2,7 +2,8 @@
 --                              Creating departments table
 CREATE TABLE departments (
     department_id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-    name VARCHAR(255) NOT NULL CHECK (LENGTH(name) > 0)
+    name VARCHAR(255) NOT NULL CHECK (LENGTH(name) > 0),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now() CHECK (updated_at <= CURRENT_TIMESTAMP)
 );
 -- ==========================================
 -- Function: Insert new department
@@ -49,6 +50,26 @@ $$ LANGUAGE plpgsql;
 
 Select * from departments
 
+-- ==========================================
+-- Trigger: update column updated_at
+-- ==========================================
+CREATE OR REPLACE FUNCTION department_set_timestamp()
+RETURNS TRIGGER AS $$
+BEGIN
+   NEW.updated_at = NOW();
+   RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS department_set_timestamp_trigger ON accounts;
+
+CREATE TRIGGER department_set_timestamp_trigger
+BEFORE INSERT OR UPDATE ON departments
+FOR EACH ROW
+EXECUTE FUNCTION department_set_timestamp();
+
+
+-------------------------------- Test
 -- Insert department mới
 SELECT insert_department('Sales');
 

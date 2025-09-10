@@ -45,9 +45,12 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE FUNCTION encrypt_text(p_text VARCHAR)
 RETURNS BYTEA AS $$
 DECLARE
-    secret_key TEXT := 'my_secret_key';
+    secret_key TEXT;
     v_encrypted BYTEA;
 BEGIN
+    -- Lấy khóa bí mật từ cấu hình hệ thống
+    secret_key := current_setting('custom.key_constant');
+
     IF p_text IS NULL THEN
         RETURN NULL;
     END IF;
@@ -209,4 +212,4 @@ AFTER INSERT OR UPDATE OR DELETE ON financial_transactions
 FOR EACH ROW EXECUTE FUNCTION audit_dml_trigger();
 ------------------------------------------------------------------------------------------------------
 
-Select * from audit_log
+Select * from audit_log;

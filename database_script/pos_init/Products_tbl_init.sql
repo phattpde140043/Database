@@ -5,7 +5,8 @@ CREATE TABLE products (
     name VARCHAR(255) NOT NULL CHECK (LENGTH(name) > 0),
     category_id BIGINT NOT NULL REFERENCES categories(category_id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now() CHECK (created_at <= now()),
-    deleted_at TIMESTAMPTZ CHECK (deleted_at IS NULL OR deleted_at > created_at)
+    deleted_at TIMESTAMPTZ CHECK (deleted_at IS NULL OR deleted_at > created_at),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now() CHECK (updated_at <= CURRENT_TIMESTAMP)
 );
 
 ---------------------------------------------------------------------------------- Creating trigger function for product_id
@@ -120,3 +121,22 @@ $$;
 --------------------------------------------------------------------------------
 -- Creating indexes
 CREATE INDEX products_name_idx ON products USING hash (name);
+
+--------------------------------------------------------------
+-- ==========================================
+-- Trigger: update column updated_at
+-- ==========================================
+CREATE OR REPLACE FUNCTION product_set_timestamp()
+RETURNS TRIGGER AS $$
+BEGIN
+   NEW.updated_at = NOW();
+   RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS product_set_timestamp_trigger ON products;
+
+CREATE TRIGGER product_set_timestamp_trigger
+BEFORE INSERT OR UPDATE ON products
+FOR EACH ROW
+EXECUTE FUNCTION product_set_timestamp();

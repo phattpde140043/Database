@@ -9,6 +9,7 @@ CREATE TABLE orders (
     shipping_address VARCHAR(500) NOT NULL,
     payment_type_id INT NOT NULL REFERENCES payment_types(payment_type_id),
     payment_status VARCHAR(20) NOT NULL CHECK (payment_status IN ('pending', 'completed', 'failed')) DEFAULT 'pending',
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now() CHECK (updated_at <= CURRENT_TIMESTAMP),
 	PRIMARY KEY (order_id,order_date)
 ) PARTITION BY RANGE (order_date);
 
@@ -42,3 +43,23 @@ SELECT create_monthly_partition('orders', 2025, 10); -- Tạo partition cho thá
 -- Creating indexes
 CREATE INDEX orders_customer_id_idx ON orders USING hash (customer_id);
 CREATE INDEX orders_order_date_idx ON orders (order_date);
+
+
+-- ==========================================
+-- Trigger: update column updated_at
+-- ==========================================
+CREATE OR REPLACE FUNCTION order_set_timestamp()
+RETURNS TRIGGER AS $$
+BEGIN
+   NEW.updated_at = NOW();
+   RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS order_set_timestamp_trigger ON orders;
+
+CREATE TRIGGER order_set_timestamp_trigger
+BEFORE INSERT OR UPDATE ON orders
+FOR EACH ROW
+EXECUTE FUNCTION order_set_timestamp();
+

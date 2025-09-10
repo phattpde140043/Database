@@ -122,7 +122,7 @@ SELECT
     pgp_sym_decrypt(email::bytea, 'tranphuphat') AS email, 
     pgp_sym_decrypt(phone::bytea, 'tranphuphat') AS phone
 FROM 
-    customers 
+    customers ;
 --------------------------------------------------------------------------------
 -- Creating product_view
 CREATE VIEW product_view AS

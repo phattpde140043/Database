@@ -100,6 +100,8 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+
+---------------------------------    Test ---------------------------------
 -- 1. Update stock theo SKU
 SELECT update_stock_by_sku(101, 200);
 

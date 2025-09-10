@@ -8,7 +8,8 @@ CREATE TABLE products_sku (
     size VARCHAR(50),
     price DECIMAL(10,2) NOT NULL CHECK (price > 0),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now() CHECK (created_at <= now()),
-    deleted_at TIMESTAMPTZ CHECK (deleted_at IS NULL OR deleted_at > created_at)
+    deleted_at TIMESTAMPTZ CHECK (deleted_at IS NULL OR deleted_at > created_at),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now() CHECK (updated_at <= CURRENT_TIMESTAMP)
 );
 --------------------------------------------------------------------------------
 -- Creating indexes
@@ -137,8 +138,27 @@ END;
 $$ LANGUAGE plpgsql;
 
 
-Select * from products_sku
-Select insert_sku('SKU_SMART_002','PROD_00001',599.9,'White','256GB')
-Select update_sku(14,'SKU_SMART_003','Gray','256GB',599.9)
-Select soft_delete_sku(15)
-Select search_skus_by_price(17,30)
+-- ==========================================
+-- Trigger: update column updated_at
+-- ==========================================
+CREATE OR REPLACE FUNCTION products_sku_set_timestamp()
+RETURNS TRIGGER AS $$
+BEGIN
+   NEW.updated_at = NOW();
+   RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS products_sku_set_timestamp_trigger ON products_sku;
+
+CREATE TRIGGER products_sku_set_timestamp_trigger
+BEFORE INSERT OR UPDATE ON products_sku
+FOR EACH ROW
+EXECUTE FUNCTION products_sku_set_timestamp();
+
+--------------------------------- Test ----------------------------
+Select * from products_sku;
+Select insert_sku('SKU_SMART_002','PROD_00001',599.9,'White','256GB');
+Select update_sku(14,'SKU_SMART_003','Gray','256GB',599.9);
+Select soft_delete_sku(15);
+Select search_skus_by_price(17,30);

@@ -3,7 +3,8 @@
 CREATE TABLE accounts (
     account_id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
     account_name VARCHAR(255) NOT NULL CHECK (LENGTH(account_name) > 0),
-    account_type VARCHAR(50) NOT NULL
+    account_type VARCHAR(50) NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now() CHECK (updated_at <= CURRENT_TIMESTAMP)
 );
 -- ==========================================
 -- Function: Insert new account
@@ -55,6 +56,27 @@ BEGIN
     END IF;
 END;
 $$ LANGUAGE plpgsql;
+
+-- ==========================================
+-- Trigger: update column updated_at
+-- ==========================================
+CREATE OR REPLACE FUNCTION account_set_timestamp()
+RETURNS TRIGGER AS $$
+BEGIN
+   NEW.updated_at = NOW();
+   RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS account_set_timestamp_trigger ON accounts;
+
+CREATE TRIGGER account_set_timestamp_trigger
+BEFORE INSERT OR UPDATE ON accounts
+FOR EACH ROW
+EXECUTE FUNCTION account_set_timestamp();
+
+
+---------------------- Test --------------------------------
 
 Select * from accounts
 -- Insert account mới
