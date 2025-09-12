@@ -200,7 +200,7 @@ DROP TRIGGER IF EXISTS shipment_set_timestamp_trigger ON shipments;
 CREATE TRIGGER shipment_set_timestamp_trigger
 BEFORE INSERT OR UPDATE ON shipments
 FOR EACH ROW
-EXECUTE FUNCTION shipment_set_timestamp();
+EXECUTE FUNCTION shipments_set_timestamp();
 
 UPDATE shipments SET updated_at = now();
 

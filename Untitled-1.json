@@ -208,12 +208,7 @@
 
 //retention time : 6 months
 
-product đã delete quá 6 tháng thì sẽ xóa khỏi database
-sku của các product đã xoá cũng sẽ bị xoá
-product_sku đã delete quá 6 tháng thì sẽ xóa khỏi database
-chỉ nên xoá category nếu tất cả products thuộc category đã bị xoá
-order đã hoàn thành quá 6 tháng thì sẽ xóa khỏi database
-order_item liên quan đến order đã xoá cũng sẽ bị xoá
+
 shipment đã hoàn thành quá 6 tháng thì sẽ xóa khỏi database
 delivery_tracking liên quan đến shipment đã xoá cũng sẽ bị xoá
 financial transaction đã hoàn thành quá 6 tháng thì sẽ xóa khỏi database
@@ -225,6 +220,12 @@ employee đã delete quá 6 tháng thì sẽ xóa khỏi database
 purchase_order đã hoàn thành quá 6 tháng thì sẽ xóa khỏi database
 purchase_order_item liên quan đến purchase_order đã xoá cũng sẽ bị xoá
 
+order đã hoàn thành quá 6 tháng thì sẽ xóa khỏi database
+order_item liên quan đến order đã xoá cũng sẽ bị xoá
+product đã delete quá 6 tháng thì sẽ xóa khỏi database
+product_sku đã delete quá 6 tháng thì sẽ xóa khỏi database
+sku của các product đã xoá cũng sẽ bị xoá
+chỉ nên xoá category nếu tất cả products thuộc category đã bị xoá
 //trigger
 
 //phân quyền
