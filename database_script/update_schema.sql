@@ -318,7 +318,6 @@ UPDATE payment_types SET updated_at = now();
 ALTER TABLE products_sku
 ADD COLUMN updated_at TIMESTAMPTZ NOT NULL DEFAULT now() 
 CHECK (updated_at <= CURRENT_TIMESTAMP);
-
 CREATE OR REPLACE FUNCTION products_sku_type_set_timestamp()
 RETURNS TRIGGER AS $$
 BEGIN
