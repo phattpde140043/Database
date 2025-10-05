@@ -80,3 +80,7 @@ SELECT insert_shipment(
     p_status := 'in_transit'
 );
 
+SELECT * FROM pg_publication;
+SELECT * FROM pg_publication_tables WHERE pubname = 'debezium_pub';
+CREATE PUBLICATION debezium_pub FOR ALL TABLES;
+\dRp+

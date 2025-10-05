@@ -140,3 +140,4 @@ $$ LANGUAGE plpgsql;
 CREATE INDEX customers_email_idx ON customers USING hash (email);
 CREATE INDEX customers_phone_idx ON customers USING hash (phone);
 CREATE INDEX customers_name_idx ON customers USING hash (name);
+

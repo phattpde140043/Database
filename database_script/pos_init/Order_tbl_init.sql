@@ -63,3 +63,7 @@ BEFORE INSERT OR UPDATE ON orders
 FOR EACH ROW
 EXECUTE FUNCTION order_set_timestamp();
 
+Select * from orders
+Select * from Shipments
+Select * from financial_transactions
+

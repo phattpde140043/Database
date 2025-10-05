@@ -84,3 +84,4 @@ SELECT insert_account('Main Account', 'Savings');
 
 -- Update account
 SELECT update_account(1,'Cash account', 'asset');
+ALTER ROLE postgres WITH REPLICATION;
