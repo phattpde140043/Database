@@ -1,7 +1,7 @@
 import psycopg2 as pgcon
 
 pos_dbname="pos_database"
-logistics_dbname="logistic_database"
+logistics_dbname="logistics_database"
 erp_dbname="erp_database"
 user="postgres"
 password="Vnptdn2@"

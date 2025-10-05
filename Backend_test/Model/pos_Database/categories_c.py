@@ -1,5 +1,5 @@
 from datetime import datetime
-from Frontend_test.common import execute_query, pos_dbname, user, password, host, port
+from common import execute_query, pos_dbname, user, password, host, port
 import pandas as pd
 
 

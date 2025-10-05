@@ -1,5 +1,5 @@
 from datetime import datetime
-from Frontend_test.common import execute_query, pos_dbname, user, password, host, port
+from common import execute_query, pos_dbname, user, password, host, port
 import pandas as pd
 
 class Customer:
@@ -63,8 +63,8 @@ class Customer:
             {
                 "customer_id": c.customer_id,
                 "name": c.name,
-                "email": c.email,
-                "phone": c.phone,
+                #"email": c.email,
+                #"phone": c.phone,
                 "address": c.address,
                 "created_at": c.created_at
             }

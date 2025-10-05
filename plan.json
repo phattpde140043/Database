@@ -26,7 +26,7 @@
       "color": { "type": "VARCHAR(50)", "description": "Color attribute of the SKU" },
       "size": { "type": "VARCHAR(50)", "description": "Size attribute of the SKU" },
       "price": { "type": "DECIMAL(10,2)", "not_null": true, "constraints": {"check": "price > 0"}, "description": "Price of the SKU" },
-      "created_at": { "type": "TIMESTAMPTZ", "default_value": "CURRENT_TIMESTAMP", "auto_generated": true, "not_null": true, "description": "Timestamp of SKU record creation" },
+      "created_at": { "type": "TIMESTAMPToZ", "default_value": "CURRENT_TIMESTAMP", "auto_generated": true, "not_null": true, "description": "Timestamp of SKU record creation" },
       "deleted_at": { "type": "TIMESTAMPTZ", "default_value": null, "constraints": {"check": "deleted_at IS NULL OR deleted_at > created_at"}, "description": "Timestamp of product soft deletion, null if active" }
     },
     "categories": {
@@ -208,24 +208,33 @@
 
 //retention time : 6 months
 
-
-shipment đã hoàn thành quá 6 tháng thì sẽ xóa khỏi database
-delivery_tracking liên quan đến shipment đã xoá cũng sẽ bị xoá
-financial transaction đã hoàn thành quá 6 tháng thì sẽ xóa khỏi database
-warehouse đã delete quá 6 tháng thì sẽ xóa khỏi database
-inventory của warehouse đã xoá cũng sẽ bị xoá
-inventory của product đã xoá cũng sẽ bị xoá
-supplier đã delete quá 6 tháng thì sẽ xóa khỏi database chỉ xoá supplier nếu toàn bộ purchase_orders của họ đã bị xoá.
-employee đã delete quá 6 tháng thì sẽ xóa khỏi database
-purchase_order đã hoàn thành quá 6 tháng thì sẽ xóa khỏi database
-purchase_order_item liên quan đến purchase_order đã xoá cũng sẽ bị xoá
+product đã delete quá 6 tháng thì sẽ xóa khỏi database
+sku của các product đã xoá cũng sẽ bị xoá
+product_sku đã delete quá 6 tháng thì sẽ xóa khỏi database
+chỉ nên xoá category nếu tất cả products thuộc category đã bị xoá
+check sku -> product -> category
 
 order đã hoàn thành quá 6 tháng thì sẽ xóa khỏi database
 order_item liên quan đến order đã xoá cũng sẽ bị xoá
-product đã delete quá 6 tháng thì sẽ xóa khỏi database
-product_sku đã delete quá 6 tháng thì sẽ xóa khỏi database
-sku của các product đã xoá cũng sẽ bị xoá
-chỉ nên xoá category nếu tất cả products thuộc category đã bị xoá
+oder_item ->order
+
+shipment đã hoàn thành quá 6 tháng thì sẽ xóa khỏi database
+delivery_tracking liên quan đến shipment đã xoá cũng sẽ bị xoá
+delivery_tracking -> shipment
+
+financial transaction đã hoàn thành quá 6 tháng thì sẽ xóa khỏi database
+
+warehouse đã delete quá 6 tháng thì sẽ xóa khỏi database
+inventory của warehouse đã xoá cũng sẽ bị xoá
+inventory của product đã xoá cũng sẽ bị xoá
+
+supplier đã delete quá 6 tháng thì sẽ xóa khỏi database chỉ xoá supplier nếu toàn bộ purchase_orders của họ đã bị xoá.
+employee đã delete quá 6 tháng thì sẽ xóa khỏi database
+
+
+purchase_order đã hoàn thành quá 6 tháng thì sẽ xóa khỏi database
+purchase_order_item liên quan đến purchase_order đã xoá cũng sẽ bị xoá
+
 //trigger
 
 //phân quyền
