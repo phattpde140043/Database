@@ -30,4 +30,19 @@
   <li><b>Data lakehouse: </b>Databricks theo mô hình Medallion</li>
 </ul>
 
+<h3>Yêu cầu kĩ thuật lớp OLTP:</h3>
+<ul>
+<li><b>Audit & Logging:</b> Các thao tác trên database phải được ghi lại log.</li>
+<li><b>PII Protection:</b> Các dữ liệu PII phải được mã hoá và chỉ có thể truy cập trên một role nhất định được cấp.</li>
+<li><b>RBAC:</b>  nguyên tắc Least Privilege- mỗi role chỉ được cấp quyền đúng theo nhu cầu sử dụng.</li>
+<li><b>Data Integrity & Constraints:</b> Bắt buộc PK, FK, Unique, Check để đảm bảo toàn vẹn. Duy trì referential integrity kể cả khi soft delete.</li>
+<li><b>Backup & Recovery:</b> Phải có phương án backup (full backup và incremental backup) và recover dữ liệu định kỳ.</li>
+<li><b>Performance & Scalability:</b> Các dữ liệu được truy vấn thường xuyên được indexing và partition để đảm bảo hiệu suất truy vấn.</li>
+<li><b>Soft Delete & Data Lifecycle:</b> Các dữ liệu được thiết kế để soft-deleted và có các trigger để xử lý dữ liệu liên quan sau khi delete.</li>
+<li><b>Dữ liệu đảm bảo tiêu chuẩn ACID.</b></li>
+<li><b>View Layer for Data Access:</b> Tạo lớp View để truy cập dữ liệu nhằm hạn chế các request trên database.</li>
+<li><b>Retention Limit:</b> Để đảm bảo hiệu suất, Database chỉ lưu dữ liệu active và đã unactive trong 3 tháng. Các dữ liệu cũ hơn sẽ được đồng bộ và lưu tại warehouse</li>
+</ul>
+
+
 
