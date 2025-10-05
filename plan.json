@@ -1,0 +1,243 @@
+{
+  "PoS_Database": {
+    "customers": {
+      "customer_id": { "type": "VARCHAR(20)", "PK": true, "auto_generated": true, "trigger": "generate_customer_id", "description": "Unique identifier for customers, auto-generated as CUST_XXX via trigger" },
+      "name": { "type": "VARCHAR(255)", "not_null": true, "constraints": {"check": "LENGTH(name) > 0"}, "description": "Full name of the customer" },
+      "email": { "type": "BYTEA", "unique": true, "indexed": true, "not_null": true, "description": "Unique email address of the customer" },
+      "phone": { "type": "BYTEA", "unique": true, "indexed": true, "not_null": true, "description": "Unique phone number of the customer" },
+      "address": { "type": "VARCHAR(500)", "not_null": true, "description": "Customer's primary address" },
+      "created_at": { "type": "TIMESTAMPTZ", "default_value": "CURRENT_TIMESTAMP", "auto_generated": true, "not_null": true,"constraint":"check{created_at <= now()}", "description": "Timestamp of customer record creation" },
+      "updated_at": { "type": "TIMESTAMPTZ", "default_value": "CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP","constraint":"check{updated_at <= now()}", "description": "Timestamp of last update to customer record" },
+      "triggers": {"customers_updated_at_trigger": "Auto-update updated_at column before update","customer_id_trigger": "Generate customer_id before insert","trg_encrypt_customers": "Encrypt email and phone before insert or update"},
+      "functions": {"customer_update_set_timestamp": "Set updated_at to current timestamp","generate_customer_id": "Generate sequential customer_id in format CUST_XXXXXX","encrypt_customer_fields": "Encrypt email and phone fields before insert/update","insert_customer": "Insert new customer with validations and encryption","update_customer": "Update existing customer with validations and encryption"},
+      "indexes": {"customers_email_idx": "Hash index on email","customers_phone_idx": "Hash index on phone","customers_name_idx": "Hash index on name"}
+    },
+    "products": {
+      "product_id": { "type": "VARCHAR(20)", "PK": true, "not_null": true, "auto_generated": true, "trigger": "generate_product_id", "description": "Unique identifier for products, auto-generated as PROD_XXX via trigger" },
+      "name": { "type": "VARCHAR(255)", "not_null": true, "constraints": {"check": "LENGTH(name) > 0"}, "description": "Name of the product" },
+      "category_id": { "type": "BIGINT", "FK": "categories.category_id", "not_null": true, "description": "References category_id in categories table" },
+      "created_at": { "type": "TIMESTAMPTZ", "default_value": "CURRENT_TIMESTAMP", "auto_generated": true, "not_null": true, "description": "Timestamp of product record creation" },
+      "deleted_at": { "type": "TIMESTAMPTZ", "default_value": null, "constraints": {"check": "deleted_at IS NULL OR deleted_at > created_at"}, "description": "Timestamp of product soft deletion, null if active" }
+    },
+    "products_sku": {
+      "sku_id": { "type": "BIGINT", "unique": true, "PK": true, "auto_generated": true, "not_null": true, "serial": true, "description": "Unique auto-incremented identifier for SKU" },
+      "sku": { "type": "VARCHAR(50)", "unique": true, "indexed": true, "not_null": true, "description": "Unique stock keeping unit code" },
+      "product_id": { "type": "VARCHAR(20)", "FK": "products.product_id", "not_null": true, "description": "References product_id in products table" },
+      "color": { "type": "VARCHAR(50)", "description": "Color attribute of the SKU" },
+      "size": { "type": "VARCHAR(50)", "description": "Size attribute of the SKU" },
+      "price": { "type": "DECIMAL(10,2)", "not_null": true, "constraints": {"check": "price > 0"}, "description": "Price of the SKU" },
+      "created_at": { "type": "TIMESTAMPToZ", "default_value": "CURRENT_TIMESTAMP", "auto_generated": true, "not_null": true, "description": "Timestamp of SKU record creation" },
+      "deleted_at": { "type": "TIMESTAMPTZ", "default_value": null, "constraints": {"check": "deleted_at IS NULL OR deleted_at > created_at"}, "description": "Timestamp of product soft deletion, null if active" }
+    },
+    "categories": {
+      "category_id": { "type": "BIGINT", "PK": true, "serial": true, "auto_generated": true, "description": "Unique auto-incremented identifier for categories" },
+      "name": { "type": "VARCHAR(255)", "not_null": true, "constraints": {"check": "LENGTH(name) > 0"}, "description": "Name of the product category" },
+      "created_at": { "type": "TIMESTAMPTZ", "default_value": "CURRENT_TIMESTAMP", "auto_generated": true, "not_null": true, "description": "Timestamp of category record creation" },
+      "deleted_at": { "type": "TIMESTAMPTZ", "default_value": null, "constraints": {"check": "deleted_at IS NULL OR deleted_at > created_at"}, "description": "Timestamp of category soft deletion, null if active" }
+    },
+    "orders": {
+      "order_id": { "type": "BIGINT", "PK": true, "serial": true, "auto_generated": true, "not_null": true, "description": "Unique auto-incremented identifier for orders" },
+      "customer_id": { "type": "VARCHAR(20)", "FK": "customers.customer_id", "indexed": true, "not_null": true, "description": "References customer_id in customers table" },
+      "order_date": { "type": "TIMESTAMPTZ", "indexed": true, "default_value": "CURRENT_TIMESTAMP", "auto_generated": true, "not_null": true, "constraints": {"check": "order_date <= CURRENT_TIMESTAMP"}, "description": "Timestamp of order creation" },
+      "total_amount": { "type": "DECIMAL(12,2)", "not_null": true, "trigger": "calculate_from_items", "constraints": {"check": "total_amount >= 0"}, "description": "Total amount of the order, calculated from order_items" },
+      "shipping_address": { "type": "VARCHAR(500)", "not_null": true, "default_value": "customer.address on customer_id", "description": "Shipping address for the order, defaults to customer address" },
+      "payment_type_id": { "type": "INT", "FK": "payment_types.payment_type_id", "not_null": true, "description": "References payment_type_id in payment_types table" },
+      "payment_status": { "type": "VARCHAR(20)", "not_null": true, "constraints": {"check": "payment_status IN ('pending', 'completed', 'failed')"}, "default_value": "pending", "description": "Payment status of the order" },
+      "partition by": { "type": "order_date", "partition_type": "RANGE by month", "description": "Partitioned by order_date using RANGE" }
+    },
+    "order_items": {
+      "order_item_id": { "type": "BIGINT", "PK": true, "not_null": true, "serial": true, "auto_generated": true, "description": "Unique auto-incremented identifier for order items" },
+      "order_id": { "type": "BIGINT", "FK": "orders.order_id", "indexed": true, "not_null": true, "description": "References order_id in orders table" },
+      "product_id": { "type": "VARCHAR(20)", "FK": "products.product_id", "not_null": true, "description": "References product_id in products table" },
+      "sku_id": { "type": "BIGINT", "FK": "products_sku.sku_id", "not_null": true, "description": "References sku_id in products_sku table" },
+      "quantity": { "type": "INT", "not_null": true, "constraints": {"check": "quantity > 0"}, "description": "Quantity of the product in the order" },
+      "unit_price": { "type": "DECIMAL(10,2)", "not_null": true, "constraints": {"check": "unit_price > 0"}, "default_value": "products_sku.price*quantity on sku", "description": "Unit price of the product, defaults to SKU price times quantity" },
+      "oder_date":{"type":"TIMESTAMPTZ", "not_null": true, "PK": true},
+      "partitioning": {"strategy": "RANGE","column": "order_date","interval": "MONTH","sub_partition": {"strategy": "HASH","column": "order_id","buckets": 4}
+    },
+    "payment_types": {
+      "payment_type_id": { "type": "INT", "PK": true, "not_null": true, "auto_generated": true, "serial": true, "description": "Unique auto-incremented identifier for payment types" },
+      "name": { "type": "VARCHAR(255)", "not_null": true, "constraints": {"check": "LENGTH(name) > 0"}, "description": "Name of the payment type" }
+    },
+    "product_view": {
+        "sku_id": { "type": "BIGINT", "description": "Identifier for SKU (inherited from source table)" },
+        "sku": { "type": "VARCHAR(50)", "description": "Unique stock keeping unit code" },
+        "product_id": { "type": "VARCHAR(20)", "description": "References product_id in products table (logical only)" },
+        "color": { "type": "VARCHAR(50)", "description": "Color attribute of the SKU" },
+        "size": { "type": "VARCHAR(50)", "description": "Size attribute of the SKU" },
+        "price": { "type": "DECIMAL(10,2)", "description": "Price of the SKU" },
+        "created_at": { "type": "TIMESTAMP", "description": "Timestamp of SKU record creation" },
+        "product_name": { "type": "VARCHAR(255)", "description": "Name of the product" },
+        "category_id": { "type": "BIGINT", "description": "References category_id in categories table (logical only)" },
+        "category_name": { "type": "VARCHAR(255)", "description": "Name of the product category" }
+        //where product is not soft-deleted and category is not soft-deleted
+    },
+    "sales_report_view": {
+        "order_id": { "type": "BIGINT", "description": "Identifier for the order (inherited from source table)" },
+        "order_date": { "type": "TIMESTAMP", "description": "Timestamp of order creation" },
+        "customer_id": { "type": "VARCHAR(20)", "description": "References customer_id in customers table (logical only)" },
+        "customer_name": { "type": "VARCHAR(255)", "description": "Full name of the customer" },
+        "total_amount": { "type": "DECIMAL(12,2)", "description": "Total amount of the order" },
+        "shipping_address": { "type": "VARCHAR(500)", "description": "Shipping address for the order" },
+        "payment_status": { "type": "VARCHAR(20)", "description": "Payment status of the order" },
+        "payment_types":{ "type": "VARCHAR(255)", "description": "Name of the payment type" },
+        "item_count": { "type": "INT", "description": "Total number of items in the order (calculated)" },
+        "sku": { "type": "VARCHAR(50)", "description": "Unique stock keeping unit code" },
+        "product_name": { "type": "VARCHAR(255)", "description": "Name of the product" },
+        "price": { "type": "DECIMAL(10,2)", "description": "Price of the SKU" },
+        "quantity": { "type": "INT", "description": "Quantity of the product in the order" }
+        //where order is not soft-deleted and customer is not soft-deleted
+        //item_count is calculated as COUNT(order_items) grouped by order_id
+    }
+  },
+  "Logistic_Database": {
+    "warehouses": {
+      "warehouse_id": { "type": "BIGINT", "unique": true, "PK": true, "not_null": true, "serial": true, "auto_generated": true, "description": "Unique auto-incremented identifier for warehouses" },
+      "name": { "type": "VARCHAR(255)", "not_null": true, "indexed": true, "constraints": {"check": "LENGTH(name) > 0"}, "description": "Name of the warehouse" },
+      "location": { "type": "VARCHAR(500)", "not_null": true, "description": "Location of the warehouse" },
+      "created_at": { "type": "TIMESTAMPTZ", "default_value": "CURRENT_TIMESTAMP", "auto_generated": true, "not_null": true, "description": "Timestamp of warehouse record creation" },
+      "deleted_at": { "type": "TIMESTAMPTZ", "default_value": null, "constraints": {"check": "deleted_at IS NULL OR deleted_at > created_at"}, "description": "Timestamp of warehouse soft deletion, null if active" }
+    },
+    "inventory": {
+      "inventory_id": { "type": "BIGINT", "unique": true, "PK": true, "not_null": true, "serial": true, "auto_generated": true, "description": "Unique auto-incremented identifier for inventory records" },
+      "warehouse_id": { "type": "BIGINT", "FK": "warehouses.warehouse_id", "not_null": true, "description": "References warehouse_id in warehouses table" },
+      "product_id": { "type": "VARCHAR(20)", "not_null": true, "indexed": true, "description": "Product identifier, validated via API" },
+      "sku_id": { "type": "BIGINT", "indexed": true, "not_null": true, "description": "SKU identifier, validated via API" },
+      "stock_quantity": { "type": "INT", "indexed": true, "not_null": true, "constraints": {"check": "stock_quantity >= 0"}, "description": "Quantity of stock in the warehouse" },
+      "last_updated": { "type": "TIMESTAMPTZ", "indexed": true, "default_value": "CURRENT_TIMESTAMP", "auto_generated": true, "not_null": true, "description": "Timestamp of last inventory update" },
+      "partition_by": "product_id", "partition_type": "HASH", "constraints": {"unique": ["warehouse_id", "product_id", "sku"]}, "description": "Partitioned by product_id using HASH"
+    },
+    "shipments": {
+      "shipment_id": { "type": "BIGINT", "unique": true, "PK": true, "not_null": true, "serial": true, "auto_generated": true, "description": "Unique auto-incremented identifier for shipments" },
+      "order_id": { "type": "BIGINT", "indexed": true, "not_null": true, "description": "Order identifier, validated via API" },
+      "warehouse_id": { "type": "BIGINT", "FK": "warehouses.warehouse_id", "not_null": true, "description": "References warehouse_id in warehouses table" },
+      "shipment_date": { "type": "TIMESTAMPTZ","PK": true, "not_null": true, "constraints": {"check": "shipment_date <= CURRENT_TIMESTAMP"}, "default_value": "CURRENT_TIMESTAMP", "description": "Timestamp of shipment creation" },
+      "status": { "type": "VARCHAR(20)", "not_null": true, "constraints": {"check": "status IN ('pending', 'in_transit', 'delivered', 'cancelled')"}, "default_value": "pending", "description": "Status of the shipment" },
+      "partition_by": "shipment_date", "partition_type": "RANGE by month", "description": "Partitioned by shipment_date using RANGE" }
+    },
+    "delivery_tracking": {
+      "tracking_id": { "type": "BIGINT", "unique": true, "PK": true, "not_null": true, "serial": true, "auto_generated": true, "description": "Unique auto-incremented identifier for tracking records" },
+      "shipment_id": { "type": "BIGINT", "FK": "shipments.shipment_id", "indexed": true, "not_null": true, "description": "References shipment_id in shipments table" },
+      "shipment_date": { "type": "TIMESTAMPTZ", "not_null": true, "constraints": {"check": "shipment_date <= CURRENT_TIMESTAMP"}, "default_value": "CURRENT_TIMESTAMP", "description": "Timestamp of shipment creation" },
+      "checkpoint_time": { "type": "TIMESTAMPTZ", "indexed": true, "not_null": true, "constraints": {"check": "checkpoint_time <= CURRENT_TIMESTAMP"}, "description": "Timestamp of tracking checkpoint" },
+      "location": { "type": "VARCHAR(500)", "not_null": true, "description": "Location of the tracking checkpoint" },
+      "status": { "type": "VARCHAR(20)", "not_null": true, "constraints": {"check": "status IN ('in_transit', 'delivered', 'cancelled')"}, "default_value": "in_transit", "description": "Status of the tracking record" },
+      "partition_by": "checkpoint_time", "partition_type": "RANGE by month", "description": "Partitioned by checkpoint_time using RANGE"
+    },
+    "shipping_report_view": {
+      "shipment_id": { "type": "BIGINT", "description": "Unique auto-incremented identifier for shipments" },
+      "order_id": { "type": "BIGINT", "description": "Order identifier, validated via API" },
+      "warehouse_id": { "type": "BIGINT", "description": "References warehouse_id in warehouses table" },
+      "warehouse_name": { "type": "VARCHAR(255)", "description": "Name of the warehouse" },
+      "location": { "type": "VARCHAR(500)", "description": "Location of the warehouse" },
+      "shipment_date": { "type": "TIMESTAMP", "default_value": "CURRENT_TIMESTAMP", "description": "Timestamp of shipment creation" },
+      "checkpoint_time": { "type": "TIMESTAMP", "description": "Timestamp of tracking checkpoint" },
+      "checkpoint_location": { "type": "VARCHAR(500)", "description": "Location of the tracking checkpoint" },
+      "status": { "type": "VARCHAR(20)", "description": "Status of the shipment" }
+      
+    },
+    "inventory_report_view": {
+        "sku_id": { "type": "BIGINT", "description": "Identifier for SKU (inherited from source table)" },
+        "product_id": { "type": "VARCHAR(20)", "description": "References product_id in products table (logical only)" },
+        "stock_quantity": { "type": "INT", "description": "Quantity of stock in the warehouse" },
+        "last_updated": { "type": "TIMESTAMP", "description": "Timestamp of last inventory update" },
+        "warehouse_id": { "type": "BIGINT", "description": "References warehouse_id in warehouses table (logical only)" },
+        "warehouse_name": { "type": "VARCHAR(255)", "description": "Name of the warehouse" },
+        "location": { "type": "VARCHAR(500)", "description": "Location of the warehouse" }
+    }
+  },
+  "ERP_Database": {
+    "employees": {
+      "employee_id": { "type": "VARCHAR(20)", "PK": true, "not_null": true, "auto_generated": true, "trigger": "generate_employee_id", "description": "Unique identifier for employees, auto-generated as EMP_XXX via trigger" },
+      "name": { "type": "VARCHAR(255)", "not_null": true, "constraints": {"check": "LENGTH(name) > 0"}, "description": "Full name of the employee" },
+      "email": { "type": "VARCHAR(255)", "unique": true, "not_null": true, "constraints": {"check": "email ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\\\.[A-Za-z]{2,}$'"}, "description": "Unique email address of the employee" },
+      "department_id": { "type": "BIGINT", "FK": "departments.department_id", "not_null": true, "description": "References department_id in departments table" },
+      "hire_date": { "type": "TIMESTAMPTZ", "indexed": true, "default_value": "CURRENT_TIMESTAMP", "not_null": true, "constraints": {"check": "hire_date <= CURRENT_TIMESTAMP"}, "description": "Timestamp of employee hire date" },
+      "salary": { "type": "DECIMAL(12,2)", "not_null": true, "constraints": {"check": "salary > 0"}, "description": "Salary of the employee" },
+      "deleted_at": { "type": "TIMESTAMPTZ", "default_value": null, "constraints": {"check": "deleted_at IS NULL OR deleted_at > created_at"}, "description": "Timestamp of employee soft deletion, null if active" }
+    },
+    "departments": {
+      "department_id": { "type": "BIGINT", "PK": true, "not_null": true, "serial": true, "auto_generated": true, "description": "Unique auto-incremented identifier for departments" },
+      "name": { "type": "VARCHAR(255)", "not_null": true, "constraints": {"check": "LENGTH(name) > 0"}, "description": "Name of the department" }
+    },
+    "suppliers": {
+      "supplier_id": { "type": "BIGINT", "PK": true, "not_null": true, "serial": true, "auto_generated": true, "description": "Unique auto-incremented identifier for suppliers" },
+      "name": { "type": "VARCHAR(255)", "indexed": true, "not_null": true, "constraints": {"check": "LENGTH(name) > 0"}, "description": "Name of the supplier" },
+      "contact_name": { "type": "VARCHAR(255)", "not_null": true, "description": "Name of the supplier's contact person" },
+      "phone": { "type": "VARCHAR(20)", "not_null": true, "constraints": {"check": "phone ~* '^\\\\+?[0-9]{7,15}$'"}, "description": "Phone number of the supplier" },
+      "email": { "type": "VARCHAR(255)", "not_null": true, "constraints": {"check": "email ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\\\.[A-Za-z]{2,}$'"}, "description": "Email address of the supplier" },
+      "created_at": { "type": "TIMESTAMPTZ", "default_value": "CURRENT_TIMESTAMP", "auto_generated": true, "not_null": true, "description": "Timestamp of supplier record creation" },
+      "deleted_at": { "type": "TIMESTAMPTZ", "default_value": null, "constraints": {"check": "deleted_at IS NULL OR deleted_at > created_at"}, "description": "Timestamp of supplier soft deletion, null if active" }
+    },
+    "purchase_orders": {
+      "po_id": { "type": "BIGINT", "PK": true, "not_null": true, "serial": true, "auto_generated": true, "description": "Unique auto-incremented identifier for purchase orders" },
+      "supplier_id": { "type": "BIGINT", "FK": "suppliers.supplier_id", "indexed": true, "not_null": true, "description": "References supplier_id in suppliers table" },
+      "order_date": { "type": "TIMESTAMPTZ", "not_null": true, "constraints": {"check": "order_date <= CURRENT_TIMESTAMP"}, "description": "Timestamp of purchase order creation" },
+      "status": { "type": "ENUM", "values": ["draft", "approved", "received", "cancelled"], "description": "Status of the purchase order" },
+      "total_amount": { "type": "DECIMAL(12,2)", "not_null": true, "trigger": "calculate_from_items", "constraints": {"check": "total_amount >= 0"}, "description": "Total amount of the purchase order, calculated from items" },
+        "partition by": { "type": "order_date", "partition_type": "RANGE by month", "description": "Partitioned by order_date using RANGE" }
+    },
+    "purchase_order_items": {
+      "po_item_id": { "type": "BIGINT", "PK": true, "not_null": true, "serial": true, "auto_generated": true, "description": "Unique auto-incremented identifier for purchase order items" },
+      "po_id": { "type": "BIGINT", "FK": "purchase_orders.po_id", "indexed": true, "not_null": true, "description": "References po_id in purchase_orders table" },
+      "product_id": { "type": "VARCHAR(20)", "not_null": true, "description": "Product identifier, validated via API" },
+      "quantity": { "type": "INT", "not_null": true, "constraints": {"check": "quantity > 0"}, "description": "Quantity of the product in the purchase order" },
+      "unit_price": { "type": "DECIMAL(10,2)", "not_null": true, "constraints": {"check": "unit_price > 0"}, "description": "Unit price of the product in the purchase order" },
+      "order_date": { "type": "TIMESTAMPTZ", "not_null": true, "constraints": {"check": "order_date <= CURRENT_TIMESTAMP"}, "description": "Timestamp of purchase order creation" },
+      "partitioning": {"strategy": "RANGE","column": "order_date","interval": "MONTH","sub_partition": {"strategy": "HASH","column": "po_id","buckets": 4}
+    },
+    "financial_transactions": {
+      "transaction_id": { "type": "BIGINT", "PK": true, "not_null": true, "serial": true, "auto_generated": true, "description": "Unique auto-incremented identifier for financial transactions" },
+      "transaction_date": { "type": "TIMESTAMPTZ", "indexed": true, "not_null": true, "constraints": {"check": "transaction_date <= CURRENT_TIMESTAMP"}, "description": "Timestamp of the financial transaction" },
+      "account_id": { "type": "BIGINT", "FK": "accounts.account_id", "not_null": true, "description": "References account_id in accounts table" },
+      "amount": { "type": "DECIMAL(12,2)", "not_null": true,"constraints": {"check": "amount > 0"},"description": "Amount of the financial transaction"},
+      "type": {"type": "ENUM","values": ["debit", "credit"],"description": "Type of the financial transaction"},
+      "status": {"type": "ENUM","values": ["draft", "approved", "received", "cancelled"],"description": "Status of the financial transaction"},
+      "partition_by": "transaction_date",
+      "partition_type": "RANGE by month",
+      "description": "Partitioned by transaction_date using RANGE"
+    },
+    "accounts": {
+      "account_id": {"type": "BIGINT","PK": true,"not_null": true,"serial": true,"auto_generated": true,"description": "Unique auto-incremented identifier for accounts"},
+      "account_name": {"type": "VARCHAR(255)","not_null": true,"constraints": {"check": "LENGTH(account_name) > 0"},"description": "Name of the account"},
+      "account_type": {"type": "VARCHAR(50)","not_null": true,"description": "Type of the account"}
+    }
+  }
+}
+}
+
+//retention time : 6 months
+
+product đã delete quá 6 tháng thì sẽ xóa khỏi database
+sku của các product đã xoá cũng sẽ bị xoá
+product_sku đã delete quá 6 tháng thì sẽ xóa khỏi database
+chỉ nên xoá category nếu tất cả products thuộc category đã bị xoá
+check sku -> product -> category
+
+order đã hoàn thành quá 6 tháng thì sẽ xóa khỏi database
+order_item liên quan đến order đã xoá cũng sẽ bị xoá
+oder_item ->order
+
+shipment đã hoàn thành quá 6 tháng thì sẽ xóa khỏi database
+delivery_tracking liên quan đến shipment đã xoá cũng sẽ bị xoá
+delivery_tracking -> shipment
+
+financial transaction đã hoàn thành quá 6 tháng thì sẽ xóa khỏi database
+
+warehouse đã delete quá 6 tháng thì sẽ xóa khỏi database
+inventory của warehouse đã xoá cũng sẽ bị xoá
+inventory của product đã xoá cũng sẽ bị xoá
+
+supplier đã delete quá 6 tháng thì sẽ xóa khỏi database chỉ xoá supplier nếu toàn bộ purchase_orders của họ đã bị xoá.
+employee đã delete quá 6 tháng thì sẽ xóa khỏi database
+
+
+purchase_order đã hoàn thành quá 6 tháng thì sẽ xóa khỏi database
+purchase_order_item liên quan đến purchase_order đã xoá cũng sẽ bị xoá
+
+//trigger
+
+//phân quyền
+
+//PII
+//audit log
