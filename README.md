@@ -22,5 +22,14 @@
     <li>Nhiều dữ liệu nhạy cảm, yêu cầu phân quyền và kiểm soát chặt chẽ</li>
   </ul>
 </ol>
+<h3>Giải pháp triển khai:</h3>
+<ul>
+  <li><b>Cơ sở dữ liệu giao dịch (OLTP): </b>PostgrSQL cho từng microserice</li>
+  <li></li>
+  <li></li>
+  <li></li>
+  <li></li>
+  <li></li>
+</ul>
 
 
