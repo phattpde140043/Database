@@ -6,17 +6,17 @@
 <H3>Tổng quan dự án: </H3>
 <p>Công ty giả định hoạt động trong lĩnh vực thương mại điện tử với ba mảng hệ thống chính:</p>
 <ol>
-  <li>PoS (Point of Sale – Bán hàng)</li>
+  <li><b>PoS (Point of Sale – Bán hàng)</b></li>
   <ul>
     <li>Quản lý giao dịch tại cửa hàng và kênh online.</li>
     <li>Dữ liệu phát sinh liên tục, khối lượng lớn (hàng triệu order/tháng).</li>
   </ul>
-  <li>Logistics (Kho vận & vận chuyển)</li>
+  <li><b>Logistics (Kho vận & vận chuyển)</b></li>
     <ul>
     <li>Theo dõi tình trạng tồn kho, điều phối vận chuyển, giao hàng.</li>
     <li>o	Yêu cầu tích hợp dữ liệu từ nhiều chi nhánh/kho khác nhau.</li>
   </ul>
-  <li>ERP (Enterprise Resource Planning – Quản lý vận hành)</li>
+  <li><b>ERP (Enterprise Resource Planning – Quản lý vận hành)</b></li>
     <ul>
     <li>Bao gồm quản lý nhân sự, tài chính, mua hàng, CMS nội bộ.</li>
     <li>Nhiều dữ liệu nhạy cảm, yêu cầu phân quyền và kiểm soát chặt chẽ</li>
@@ -25,11 +25,9 @@
 <h3>Giải pháp triển khai:</h3>
 <ul>
   <li><b>Cơ sở dữ liệu giao dịch (OLTP): </b>PostgrSQL cho từng microserice</li>
-  <li></li>
-  <li></li>
-  <li></li>
-  <li></li>
-  <li></li>
+  <li><b>Streaming ingestion:</b> Kafka/Debezium để đồng bộ dữ liệu realtime về Data lake</li>
+  <li><b>Batch ingestion: </b>Sử dụng Airflow để tạo các scheduled job nhằm load dữ liệu lên warehouse theo script</li>
+  <li><b>Data lakehouse: </b>Databricks theo mô hình Medallion</li>
 </ul>
 
 
