@@ -1,8 +1,11 @@
+<head>
 <style>
   .bold{
     font-weight: bold;
   }
 </style>
+</head>
+<body>
 <H1>Database: The ELT pipeline </H1>
 
 <H3>Mô hình dự án: </H3>
@@ -14,3 +17,4 @@
   <ol class ="bold">2.	Logistic (Kho vận - vận chuyển):</ol>
   <ol class ="bold">1.	ERP (Enterprise Resource Planning – Quản lý vận hành):</ol>
 </li>
+</body>
