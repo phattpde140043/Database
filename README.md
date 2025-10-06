@@ -79,6 +79,27 @@
   </ul>
 </ul>
 
+<h3>Yêu cầu kĩ thuật với lớp OLAP</h3>
+<ul>
+  <li>Cơ chế phân quyền phải đảm bảo RBAC:</li>
+  <ul>
+    <li>Bronze layer: Đây là tầng dữ liệu Raw nhất. chỉ có thành viên trong nhóm Data Engineer có quyền truy cập. </li>
+    <li>Silver layer: Đây là dữ liệu đã chuẩn hóa. ngoài đội ngữ Data Engineer truy cập thì Data Analyst và Data Scientist cũng có thể truy cập bảng với quyền READ(tuy nhiên, tốt nhất chỉ nên tiếp xúc với View tạo sẵn)</li>
+    <li>Gold layer: Đây là dữ liệu business-friendly. ngoài DE và DS thì các role Business Analyst, BI Dev cũng nên có quyền READ qua các view được chỉ định trước tùy theo scope của công việc.</li>
+    <li>Ngoài phân quyền theo role công việc, một số bảng dữ liệu quan trọng nên được bảo mật và chỉ cấp quyền cho những thành viên trong nhóm có task liên quan. và cần thu hồi quyền sau khi hoàn thành.</li>
+  </ul>
+  <li>Partition Strategy & Query performance </li>
+  <ul>
+    <li>Bronze layer: query chủ yếu là luồng load dữ liệu lên tầng Silver. nên các bảng trong tầng này chủ yếu partition theo ingestion_time (daily/monthly tùy thuộc vào quy mô dự án)</li>
+    <li>Silver layer: cần thiết kế partition strategy theo nghiệp vụ. tập trung vào các cột thường dùng là điều kiện truy vấn.</li>
+    <li>Gold layer: Tập trung phục vụ business query và BI dashboards. Nhiều trường hợp Gold table đã ở mức aggregated/denormalized → có thể không cần partition phức tạp.</li>
+    <li>Min mỗi partition nên là 1 GB.</li>
+    <li>Ngoài cơ chế partition thì nên sắp xếp các cột của bảng hợp lý để tận dụng thêm khả năng data skipping của statistics.</li>
+    <li>Nếu có nhiều cột cần query ngoài partition thì sử dụng thêm Z-order.</li>
+    <li>Query phức tạp lặp lại → cân nhắc Materialized view ở Gold layer.</li>
+    <li>Cân nhắc trade-off: tránh partition theo cột high-cardinality (vd: user_id) để không sinh quá nhiều file nhỏ.</li>
+  </ul>
+</ul>
 
 
 
