@@ -1,6 +1,14 @@
 
 <H1>Database: The ELT pipeline </H1>
 
+<h3>Cấu trúc thư mục:</h3>
+<ul>
+  <li><b>database_script:</b> Script implement Database trên PostgreSQL</li>
+  <li><b>airflow/dags:</b> Các scheduled job hoạt động trên airflow</li>
+  <li><b>Databricks: </b>Script implement Warehouse trên Databricks và các data pipelines</li>
+  <li><b>Project Report:</b>b> File Report tổng hợp quá trình thiết kế dự án</li>
+</ul>
+
 <H3>Mô hình dự án: </H3>
 <img alt="image" width="100%" height="auto" src="https://github.com/user-attachments/assets/3b3841c6-1406-4b76-8562-7c0ff22f4dad" />
 <H3>Tổng quan dự án: </H3>
@@ -43,6 +51,23 @@
 <li><b>View Layer for Data Access:</b> Tạo lớp View để truy cập dữ liệu nhằm hạn chế các request trên database.</li>
 <li><b>Retention Limit:</b> Để đảm bảo hiệu suất, Database chỉ lưu dữ liệu active và đã unactive trong 3 tháng. Các dữ liệu cũ hơn sẽ được đồng bộ và lưu tại warehouse</li>
 </ul>
+
+<h3>Cấu trúc luồng ELT</h3>
+<h4>Streaming Ingestion:</h4>
+<p><b>Quy trình:</b></p>
+<ul>
+  <li> Triển khai cấu hình kafka, Debezium. kích hoạt WAL trong PostgreSQL.</li>
+  <li> Debezium theo dõi các dữ liệu WAL của postgreSQL và chuyển thành message bằng Kafka</li>
+  <li> Databricks có các luồng streaming liên tục nhận dữ liệu từ Kafka và đưa vào bảng của layer Bronze.
+</ul>
+<h4>Batch Ingestion:</h4>
+<p><b>Quy trình: </b></p>
+<ul>
+  <li>Viết các DAGS airflow và cấu hình scheduled job định kỳ truy vấn dữ liệu mới trên PostgreSQL bằng watermark.</li>
+  <li>Dữ liệu được lưu thành file Parquet sau đó đẩy vào các folder trong cloud storage như S3.</li>
+  <li>Có các luồng AutoLoader với option alvailabeNow định kỳ kích hoạt và quét các thư mục này và xử lý dữ liệu nạp vào bảng Bronze.</li> 
+</ul>
+
 
 
 
