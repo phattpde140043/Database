@@ -6,7 +6,7 @@
   <li><b>database_script:</b> Script implement Database trên PostgreSQL</li>
   <li><b>airflow/dags:</b> Các scheduled job hoạt động trên airflow</li>
   <li><b>Databricks: </b>Script implement Warehouse trên Databricks và các data pipelines</li>
-  <li><b>Project Report:</b>b> File Report tổng hợp quá trình thiết kế dự án</li>
+  <li><b>Project Report:</b> File Report tổng hợp quá trình thiết kế dự án</li>
 </ul>
 
 <H3>Mô hình dự án: </H3>
@@ -66,6 +66,17 @@
   <li>Viết các DAGS airflow và cấu hình scheduled job định kỳ truy vấn dữ liệu mới trên PostgreSQL bằng watermark.</li>
   <li>Dữ liệu được lưu thành file Parquet sau đó đẩy vào các folder trong cloud storage như S3.</li>
   <li>Có các luồng AutoLoader với option alvailabeNow định kỳ kích hoạt và quét các thư mục này và xử lý dữ liệu nạp vào bảng Bronze.</li> 
+</ul>
+<h3>Cấu trúc lớp Warehouse:</h3>
+<h4>Kiến trúc tổng thể mô hình Medallion:</h4>
+<ul>
+  <li><b>Bronze Layer:</b>Lưu trữ dữ liệu thô từ các nguồn database khác nhau và cho phép tích hợp từ rất nhiều nguồn dữ liệu khác và các kiểu dữ liệu khác. Lưu trữ với định dạng gốc nhằm đảm bảo "source of truth" dễ dàng truy vấn ngược, khắc phục lỗi cũng như kiểm toán dữ liệu</li>
+  <li><b>Silver Layer:</b> Dữ liệu được lấy từ tầng bronze chuẩn hóa tất cả dữ liệu từ nhiều nguồn về một định dạng duy nhất. Đảm bảo dữ liệu tại tâng này là dữ liệu mới nhất hiện tại.</li>
+  <li><b>Gold Layer:</b> Dữ liệu từ tầng Silver được làm giàu, dựa trên các dữ liệu đấy sẽ xử lý theo 2 hướng: </li>
+  <ul>
+    <li>Dữ liệu được join với nhau và tính toán sau đó lưu thành các view để làm nguồn dữ liệu cho các báo cáo vận hành.</li>
+    <li>Dữ liệu trải qua các kĩ thuật khai phá dữ liệu, khai thác thêm các feature cần thiết để làm tài nguyên cho các kĩ thuật ML, AI</li>
+  </ul>
 </ul>
 
 
