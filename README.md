@@ -123,5 +123,28 @@
   <li>Key-rotation định kỳ.</li>
 </ul>
 <li>Data Integrity & Constraint:</li>
+<ul>
+<li>Entity integrity: Mỗi bản ghi phải có khóa định danh duy nhất.</li>
+<ul>
+  <li><b>Bronze:</b> Mỗi dòng có một giá trị hash tổng hợp từ tất các các column cần so sánh của record đấy. Chỉ cần so sánh giá trị hash sẽ đảm bảo các row không bị trùng. Và so sánh hash giữa giá trị tại OLTP và bronze cũng như giữa bronzee và silver giúp phats hiện sai khác dữ liệu.</li>
+  <li><b>Silver-Gold: Mỗi dòng của bản silver có giá trị ID làm khóa định danh vì chỉ cần giữ giá trị mới nhất.
+</ul>
+<li><b>Referential integrity: </b>đảm bảo quan hệ giữa các bảng phải tồn tại và luôn update dữ liệu mới từ cả 2 chiều.</li>
+<li>Domain integrity: Dữ liệu phải nằm trong phạm vi hợp lệ.</li>
+<li>Temporal integrity: Dữ liệu phản ánh đúng thời điểm.</li>
+<li>Pipeline integrity: Dữ liệu không bị đeuplicate/ mất trong quá trình ELT.</li>
+<li>Job định kỳ kiểm tra và khắc phục dữ liệu.</li>    
+</ul>
 <li>Backup & Recovery:</li>
+<ul>
+  <li>Sử dụng chức năng Time Travel để recovery dữ liệu.</li>
+  <li>Lưu data tại cloud storage và định kỳ back up dữ liệu tại storage.</li>
+  <li>Sync dữ liệu với các nền tảng version control như github để lưu config và setup hệ thống</li>
+</ul>
+<li>Soft Delete & Data Lifecycle & Retention Limit</li>
+<ul>
+  <li>Chỉ sử dụng soft-delete, chứ không hard-delete dữ liệu thật.</li>
+  <li>Có kế hoạch lưu trữ dữ liệu dựa trên nghiệp vụ kinh doanh để tối ưu chi phí.</li>
+  <li>Các dữ liệu cũ ngoài hạn mức và ít có nhu cầu truy cập thì đóng gói chuyển sang vùng lưu trữ cho chi phí thấp hơn(archive zone)</li>
+</ul>
 
