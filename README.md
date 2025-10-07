@@ -100,7 +100,7 @@
     <li>Cân nhắc trade-off: tránh partition theo cột high-cardinality (vd: user_id) để không sinh quá nhiều file nhỏ.</li>
   </ul>
 </ul>
-<h3>Audit & Logging</h3>
+<li>Audit & Logging</li>
 <ul>
   <li>Kích hoạt chức năng Unity Catalog audit logs cho mọi hành động và có thể lưu vào cloud storage.</li>
   <li>Kích hoạt Delta Table Change Data Feed để theo dõi sự thay đổi dữ liệu ở  các bảng.</li>
@@ -114,7 +114,7 @@
     <li>error stacktrace (nếu có)</li>
   </ul>
 </ul>
-<h3> PII Protection:</h3>
+<li> PII Protection:</li>
 <ul>
   <li>Sử dụng Centralized Access Control của Unity Catalog để giới hạn truy cập dữ liệu PII.</li>
   <li>Sử dụng Column Masking Policies cho các cột chứa PII.</li>
@@ -122,6 +122,6 @@
   <li>Sử dụng Customer Managed Keys (CMK) thay cho mã hóa mặc định của Databricks đối với dữ liệu At Rest.</li>
   <li>Key-rotation định kỳ.</li>
 </ul>
-<h3>Data Integrity & Constraint:</h3>
-<h3>Backup & Recovery:</h3>
+<li>Data Integrity & Constraint:</li>
+<li>Backup & Recovery:</li>
 
